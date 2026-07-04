@@ -1,0 +1,1792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<meta name="theme-color" content="#1C1A17">
+<meta name="description" content="Story Canvas — a personal workspace for writing and worldbuilding.">
+<title>Story Canvas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%231C1A17'/%3E%3Ctext x='50' y='68' font-size='58' text-anchor='middle' fill='%23D4744E' font-family='Georgia,serif'%3ES%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="manifest.json">
+</head>
+<body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #1C1A17;
+    --bg-dot: #2A2622;
+    --surface: #252220;
+    --surface-hi: #2E2A26;
+    --border: #4A443C;
+    --border-soft: #38332D;
+    --text: #E8E2D4;
+    --text-dim: #A39A8A;
+    --text-faint: #726A5C;
+    --wax: #D4744E;
+    --wax-dim: #C9613D;
+    --sage: #9AA88F;
+    --sage-dim: #7A8471;
+    --shadow: rgba(0,0,0,0.45);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    background: #1C1A17;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
+
+  button, input, textarea {
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:focus, input:focus, textarea:focus {
+    outline: none;
+  }
+  button:focus-visible {
+    box-shadow: 0 0 0 2px var(--wax-dim);
+  }
+
+  #cv-root {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  #cv-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: #19170F14;
+    background: #17151280;
+    border-right: 1px solid var(--border-soft);
+    padding: 18px 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 5;
+    transition: width 0.18s ease, padding 0.18s ease, opacity 0.18s ease;
+    overflow: hidden;
+  }
+  #cv-sidebar.collapsed { width: 0; padding: 18px 0; border-right: none; opacity: 0; }
+
+  #cv-title-block { padding: 0 16px 16px 16px; border-bottom: 1px dashed var(--border); margin-bottom: 10px; }
+  #cv-title-block .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--wax); display: block; margin-bottom: 5px;
+  }
+  #cv-project-name {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 16px; line-height: 1.3;
+    background: transparent; border: none; outline: none; color: var(--text);
+    width: 100%; resize: none;
+  }
+
+  .cv-boardlist { padding: 0 8px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; flex: 1; }
+  .cv-board-item {
+    font-family: 'Fraunces', serif; font-size: 13.5px; font-weight: 500;
+    color: var(--text-dim); background: transparent; border: none;
+    text-align: left; padding: 8px 10px; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s;
+  }
+  .cv-board-item:hover { background: var(--surface); color: var(--text); }
+  .cv-board-item.active { background: var(--surface-hi); color: var(--text); font-weight: 600; }
+  .cv-board-item.active::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--wax); flex-shrink: 0; }
+  .cv-board-item:not(.active)::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .cv-board-name-input {
+    font-family: 'Fraunces', serif; font-size: 13.5px; font-weight: 500; background: transparent;
+    border: none; outline: none; color: inherit; width: 100%; cursor: text;
+  }
+  .cv-board-delete {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 12px; padding: 2px 4px; line-height: 1; flex-shrink: 0; opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+  }
+  .cv-board-item:hover .cv-board-delete { opacity: 1; }
+  .cv-board-delete:hover { color: var(--wax); }
+
+  #cv-new-board-btn {
+    margin: 10px 8px 0 8px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: var(--text-faint); background: transparent; border: 1px dashed var(--border);
+    padding: 7px; border-radius: 4px; cursor: pointer; transition: color 0.15s, border-color 0.15s;
+  }
+  #cv-new-board-btn:hover { color: var(--wax); border-color: var(--wax-dim); }
+
+  #cv-layers-head {
+    padding: 12px 16px 6px 16px; margin-top: 6px; border-top: 1px dashed var(--border);
+  }
+  #cv-layers-head .eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .cv-layerlist {
+    max-height: 200px; min-height: 0; overflow-y: auto; padding: 0 8px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .cv-layer-item {
+    display: flex; align-items: center; gap: 6px; padding: 6px 8px; border-radius: 4px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .cv-layer-item:hover { background: var(--surface); }
+  .cv-layer-item.active { background: var(--surface-hi); }
+  .cv-layer-name {
+    font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text-dim);
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cv-layer-item.active .cv-layer-name { color: var(--text); }
+  .cv-layer-btn {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 11px; padding: 2px 4px; line-height: 1; flex-shrink: 0;
+  }
+  .cv-layer-btn:hover { color: var(--wax); }
+  .cv-layer-empty {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint);
+    padding: 8px; font-style: italic;
+  }
+
+  #cv-backup-row {
+    display: flex; gap: 6px; padding: 10px 8px 0 8px; margin-top: 8px; border-top: 1px dashed var(--border);
+  }
+  #cv-export-btn {
+    flex: 2;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+    background: var(--wax-dim); color: #1C1A17; border: none;
+    padding: 8px 6px; border-radius: 4px; cursor: pointer; letter-spacing: 0.02em;
+    transition: background 0.15s;
+  }
+  #cv-export-btn:hover { background: var(--wax); }
+  #cv-import-btn {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    background: transparent; color: var(--text-faint); border: 1px solid var(--border-soft);
+    padding: 8px 4px; border-radius: 4px; cursor: pointer;
+  }
+  #cv-import-btn:hover { color: var(--text); border-color: var(--border); }
+
+  #cv-storage-note {
+    padding: 10px 16px 0 16px; margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); line-height: 1.5;
+  }
+
+  #cv-exit-block {
+    padding: 12px 8px 8px 8px;
+    margin-top: auto;
+  }
+  #cv-exit-btn {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    background: transparent; color: var(--text-faint);
+    border: 1px solid var(--border-soft);
+    padding: 8px; border-radius: 4px; cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    text-align: center;
+  }
+  #cv-exit-btn:hover { color: var(--wax); border-color: var(--wax-dim); background: rgba(201,97,61,0.07); }
+
+  #cv-fullscreen-btn.is-fullscreen { color: var(--wax); border-color: var(--wax-dim); }
+
+  /* ---------- CANVAS AREA ---------- */
+  #cv-canvas-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+  }
+  #cv-canvas-wrap.panning { cursor: grabbing; }
+  #cv-canvas-wrap.connecting { cursor: crosshair; }
+
+  #cv-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    background-image: radial-gradient(circle at 1px 1px, var(--bg-dot) 1.4px, transparent 0);
+    background-size: 26px 26px;
+  }
+
+  #cv-connectors {
+    position: absolute;
+    top: 0; left: 0;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  /* ---------- TOOLBAR ---------- */
+  #cv-toolbar {
+    position: absolute;
+    top: 16px; left: 16px;
+    z-index: 10;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .cv-tool-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.02em;
+    background: var(--surface); color: var(--text); border: 1px solid var(--border-soft);
+    padding: 8px 13px; border-radius: 5px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s, border-color 0.15s;
+    backdrop-filter: blur(6px);
+  }
+  .cv-tool-btn:hover { background: var(--surface-hi); border-color: var(--border); }
+  .cv-tool-btn.primary { background: var(--wax-dim); color: #1C1A17; border-color: var(--wax-dim); font-weight: 600; }
+  .cv-tool-btn.primary:hover { background: var(--wax); }
+  .cv-tool-btn.accent-sage { background: var(--sage-dim); color: #1C1A17; border-color: var(--sage-dim); font-weight: 600; }
+  .cv-tool-btn.accent-sage:hover { background: var(--sage); }
+  .cv-sidebar-toggle {
+    background: var(--surface); border: 1px solid var(--border-soft); color: var(--text-dim);
+    width: 32px; height: 32px; border-radius: 5px; cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px);
+  }
+  .cv-sidebar-toggle:hover { color: var(--text); border-color: var(--border); }
+
+  /* ---------- ZOOM CONTROLS ---------- */
+  #cv-zoom-controls {
+    position: absolute; bottom: 16px; left: 16px; z-index: 10;
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 6px;
+    padding: 4px; backdrop-filter: blur(6px);
+  }
+  .cv-zoom-btn {
+    width: 26px; height: 26px; background: transparent; border: none; color: var(--text-dim);
+    cursor: pointer; border-radius: 4px; font-size: 14px; display: flex; align-items: center; justify-content: center;
+  }
+  .cv-zoom-btn:hover { background: var(--surface-hi); color: var(--text); }
+  #cv-zoom-pct {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-faint);
+    width: 42px; text-align: center;
+  }
+
+  #cv-hint {
+    position: absolute; bottom: 16px; right: 16px; z-index: 10;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint);
+    background: var(--surface); border: 1px solid var(--border-soft); padding: 7px 11px; border-radius: 6px;
+    max-width: 230px; line-height: 1.6; backdrop-filter: blur(6px);
+  }
+
+  /* ---------- NODES ---------- */
+  .cv-node {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 6px;
+    box-shadow: 0 4px 14px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    min-width: 180px;
+    user-select: none;
+    outline: none;
+  }
+  .cv-node.dragging { box-shadow: 0 10px 28px var(--shadow); border-color: var(--wax-dim); z-index: 50; }
+  .cv-node.selected { border-color: var(--wax-dim); box-shadow: 0 0 0 1px var(--wax-dim), 0 6px 20px var(--shadow); }
+
+  .cv-node-head {
+    display: flex; align-items: center; gap: 7px;
+    padding: 9px 10px 7px 10px;
+    cursor: grab;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .cv-node.dragging .cv-node-head { cursor: grabbing; }
+  .cv-node-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .cv-node-dot.type-idea { background: var(--wax-dim); }
+  .cv-node-dot.type-profile { background: var(--sage-dim); }
+  .cv-node-dot.type-note { background: var(--text-faint); }
+  .cv-node-dot.type-image { background: var(--text-faint); }
+
+  .cv-node-title {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px;
+    background: transparent; border: none; outline: none; color: var(--text);
+    flex: 1; min-width: 0; cursor: text;
+  }
+  .cv-node-title::placeholder { color: var(--text-faint); font-weight: 500; }
+
+  .cv-node-close {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 13px; line-height: 1; padding: 2px 4px; flex-shrink: 0;
+  }
+  .cv-node-close:hover { color: var(--wax); }
+
+  .cv-node-body {
+    font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.55; color: var(--text-dim);
+    background: transparent; border: none; outline: none; resize: none;
+    padding: 9px 10px; min-height: 50px; cursor: text; width: 100%;
+  }
+  .cv-node-body::placeholder { color: var(--text-faint); font-style: italic; }
+
+  .cv-node-img-wrap {
+    width: 100%; background: #17151280; overflow: hidden;
+    min-height: 90px; display: flex; align-items: center; justify-content: center;
+    position: relative; flex: 1;
+  }
+  .cv-node-img-wrap.dragover { outline: 2px dashed var(--wax-dim); outline-offset: -2px; }
+  .cv-node-img-wrap img { width: 100%; height: 100%; display: block; object-fit: contain; }
+  .cv-node-img-placeholder {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint);
+    text-align: center; padding: 16px; line-height: 1.6;
+  }
+  .cv-node-img-actions {
+    display: flex; gap: 6px; padding: 8px 10px;
+  }
+  .cv-node-img-actions button {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    background: var(--surface-hi); color: var(--text-dim); border: 1px solid var(--border-soft);
+    padding: 6px 4px; border-radius: 4px; cursor: pointer;
+  }
+  .cv-node-img-actions button:hover { color: var(--text); border-color: var(--border); }
+  .cv-node-img-url {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; margin: 0 10px 8px 10px;
+    background: #17151280; border: 1px solid var(--border-soft); border-radius: 4px;
+    padding: 6px 8px; color: var(--text-dim); outline: none;
+  }
+
+  /* Bare image node: no card chrome, just the picture and floating controls */
+  .cv-node.cv-node-bare-image {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    min-width: 80px;
+  }
+  .cv-node.cv-node-bare-image.selected,
+  .cv-node.cv-node-bare-image.dragging {
+    border: none;
+    box-shadow: none;
+  }
+  .cv-node.cv-node-bare-image.dragging .cv-node-img-wrap {
+    box-shadow: 0 0 0 2px var(--wax-dim), 0 10px 28px var(--shadow);
+  }
+  .cv-node.cv-node-bare-image.selected .cv-node-img-wrap {
+    box-shadow: 0 0 0 2px var(--wax-dim);
+  }
+  .cv-node.cv-node-bare-image .cv-node-img-wrap {
+    background: transparent;
+    border-radius: 4px;
+    min-height: 60px;
+  }
+  .cv-node-float-controls {
+    position: absolute; top: 6px; right: 6px;
+    display: flex; gap: 4px; align-items: center;
+    opacity: 0; transition: opacity 0.12s ease;
+    z-index: 5;
+  }
+  .cv-node-bare-image:hover .cv-node-float-controls,
+  .cv-node-bare-image.selected .cv-node-float-controls { opacity: 1; }
+  .cv-node-float-btn {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--surface-hi); border: 1px solid var(--border-soft); color: var(--text-dim);
+    cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .cv-node-float-btn:hover { color: var(--wax); border-color: var(--wax-dim); }
+
+  .cv-node-label-strip {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 5px;
+    padding: 6px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .cv-node-label-strip.pos-above { margin-bottom: 6px; }
+  .cv-node-label-strip.pos-below { margin-top: 6px; }
+  .cv-node-label-title {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px;
+    background: transparent; border: none; color: var(--text); width: 100%; cursor: text;
+  }
+  .cv-node-label-title::placeholder { color: var(--text-faint); font-weight: 500; }
+  .cv-node-label-caption {
+    font-family: 'Inter', sans-serif; font-size: 11.5px; line-height: 1.4; color: var(--text-dim);
+    background: transparent; border: none; resize: none; width: 100%; cursor: text; min-height: 20px;
+  }
+  .cv-node-label-caption::placeholder { color: var(--text-faint); font-style: italic; }
+  .cv-node-label-remove {
+    align-self: flex-end;
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 0;
+  }
+  .cv-node-label-remove:hover { color: var(--wax); }
+
+  .cv-node-resize {
+    position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px; cursor: nwse-resize;
+    color: var(--text-faint);
+  }
+  .cv-node-resize svg { width: 100%; height: 100%; }
+
+  .cv-handle {
+    position: absolute;
+    width: 11px; height: 11px;
+    background: var(--bg);
+    border: 2px solid var(--wax-dim);
+    border-radius: 50%;
+    cursor: crosshair;
+    z-index: 30;
+    transition: transform 0.1s ease, background 0.1s ease;
+  }
+  .cv-handle:hover { transform: scale(1.3); background: var(--wax-dim); }
+
+  .cv-connector-path {
+    fill: none;
+    stroke: var(--wax-dim);
+    stroke-width: 1.8;
+    opacity: 0.75;
+  }
+  .cv-connector-hit {
+    fill: none;
+    stroke: transparent;
+    stroke-width: 14;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+  .cv-connector-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    fill: var(--text-dim);
+  }
+  .cv-connector-label-bg { fill: var(--bg); }
+
+  #cv-empty-hint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; color: var(--text-faint); pointer-events: none; z-index: 1;
+    width: 340px;
+  }
+  #cv-empty-hint .glyph { font-family: 'Fraunces', serif; font-style: italic; font-size: 34px; color: var(--border); margin-bottom: 10px; }
+  #cv-empty-hint p { font-size: 12.5px; line-height: 1.7; margin: 0; }
+
+  #cv-save-indicator {
+    position: absolute; top: 16px; right: 16px; z-index: 10;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--sage);
+    background: var(--surface); border: 1px solid var(--border-soft); padding: 6px 11px; border-radius: 5px;
+    opacity: 0; transition: opacity 0.4s ease; pointer-events: none; backdrop-filter: blur(6px);
+  }
+  #cv-save-indicator.show { opacity: 1; }
+
+  @media (max-width: 720px) {
+    #cv-sidebar { position: absolute; height: 100%; background: var(--bg); }
+    #cv-hint { display: none; }
+  }
+
+  /* ---------- CONFIRM DIALOG ---------- */
+  #cv-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 9, 7, 0.6);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  #cv-confirm-overlay.show { display: flex; }
+
+  #cv-confirm-box {
+    background: var(--surface-hi);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 22px 24px;
+    width: 280px;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+  }
+  #cv-confirm-icon {
+    font-size: 22px;
+    color: var(--wax);
+    margin-bottom: 8px;
+  }
+  #cv-confirm-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  #cv-confirm-msg {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  #cv-confirm-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+  }
+  #cv-confirm-actions button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 8px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    border: 1px solid var(--border-soft);
+  }
+  #cv-confirm-cancel {
+    background: transparent;
+    color: var(--text-dim);
+  }
+  #cv-confirm-cancel:hover { background: var(--surface); color: var(--text); }
+  #cv-confirm-ok {
+    background: var(--wax-dim);
+    color: #1C1A17;
+    font-weight: 600;
+    border-color: var(--wax-dim);
+  }
+  #cv-confirm-ok:hover { background: var(--wax); }
+</style>
+
+<div id="cv-root">
+  <div id="cv-sidebar">
+    <div id="cv-title-block">
+      <span class="eyebrow">Workshop</span>
+      <textarea id="cv-project-name" rows="2" placeholder="Untitled story">Untitled Story</textarea>
+    </div>
+    <div class="cv-boardlist" id="cv-boardlist"></div>
+    <button id="cv-new-board-btn">+ new board</button>
+
+    <div id="cv-layers-head">
+      <span class="eyebrow">Cards on this board</span>
+    </div>
+    <div class="cv-layerlist" id="cv-layerlist"></div>
+
+    <div id="cv-backup-row">
+      <button id="cv-export-btn">&#8659; Download backup</button>
+      <button id="cv-import-btn" title="Restore from a backup file">Import</button>
+      <input type="file" id="cv-import-input" accept=".json,application/json" style="display:none;">
+    </div>
+    <div id="cv-storage-note">Saves automatically to this device. Download a backup now and then to be safe.</div>
+
+    <div id="cv-exit-block">
+      <button id="cv-exit-btn">&#x2715; Close app</button>
+    </div>
+  </div>
+
+  <div id="cv-canvas-wrap">
+    <div id="cv-toolbar">
+      <button class="cv-sidebar-toggle" id="cv-sidebar-toggle" title="Toggle sidebar">&#9776;</button>
+      <button class="cv-sidebar-toggle" id="cv-fullscreen-btn" title="Fullscreen (F11)">&#x26F6;</button>
+      <button class="cv-tool-btn primary" id="cv-add-note-btn">+ Note</button>
+      <button class="cv-tool-btn accent-sage" id="cv-add-img-btn">+ Image</button>
+      <button class="cv-tool-btn" id="cv-connect-btn">&#8599; Connect</button>
+    </div>
+
+    <svg id="cv-connectors"></svg>
+    <div id="cv-canvas"></div>
+
+    <div id="cv-empty-hint">
+      <div class="glyph">&mdash;</div>
+      <p>Empty canvas. Add a note or image, drag it anywhere, scroll to pan, pinch or ctrl+scroll to zoom. Use Connect to link two cards.</p>
+    </div>
+
+    <div id="cv-zoom-controls">
+      <button class="cv-zoom-btn" id="cv-zoom-out">&minus;</button>
+      <span id="cv-zoom-pct">100%</span>
+      <button class="cv-zoom-btn" id="cv-zoom-in">+</button>
+      <button class="cv-zoom-btn" id="cv-zoom-reset" title="Reset view">&#8982;</button>
+    </div>
+
+    <div id="cv-hint">Scroll to pan &middot; Ctrl/Cmd+scroll or pinch to zoom &middot; Drag cards to move &middot; Hover a picture for its controls &middot; Drag the red dot to connect</div>
+    <div id="cv-save-indicator">saved</div>
+  </div>
+
+  <div id="cv-confirm-overlay">
+    <div id="cv-confirm-box">
+      <div id="cv-confirm-icon">&#9888;</div>
+      <div id="cv-confirm-title">Delete this?</div>
+      <div id="cv-confirm-msg">This can't be undone.</div>
+      <div id="cv-confirm-actions">
+        <button id="cv-confirm-cancel">Cancel</button>
+        <button id="cv-confirm-ok">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const $ = (id) => document.getElementById(id);
+  const wrap = $('cv-canvas-wrap');
+  const canvas = $('cv-canvas');
+  const svg = $('cv-connectors');
+  const emptyHint = $('cv-empty-hint');
+  const boardlistEl = $('cv-boardlist');
+  const layerlistEl = $('cv-layerlist');
+  const nameEl = $('cv-project-name');
+  const saveIndicator = $('cv-save-indicator');
+  const zoomPct = $('cv-zoom-pct');
+
+  const confirmOverlay = $('cv-confirm-overlay');
+  const confirmTitleEl = $('cv-confirm-title');
+  const confirmMsgEl = $('cv-confirm-msg');
+  const confirmOkBtn = $('cv-confirm-ok');
+  const confirmCancelBtn = $('cv-confirm-cancel');
+  let pendingConfirm = null;
+
+  function showConfirm({ title, msg, okLabel, hideCancel, onConfirm }) {
+    confirmTitleEl.textContent = title || 'Delete this?';
+    confirmMsgEl.textContent = msg || "This can't be undone.";
+    confirmOkBtn.textContent = okLabel || 'Delete';
+    confirmCancelBtn.style.display = hideCancel ? 'none' : '';
+    pendingConfirm = onConfirm;
+    confirmOverlay.classList.add('show');
+  }
+  function hideConfirm() {
+    confirmOverlay.classList.remove('show');
+    pendingConfirm = null;
+  }
+  confirmOkBtn.onclick = () => {
+    const fn = pendingConfirm;
+    hideConfirm();
+    if (fn) fn();
+  };
+  confirmCancelBtn.onclick = () => hideConfirm();
+  confirmOverlay.onclick = (e) => { if (e.target === confirmOverlay) hideConfirm(); };
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && confirmOverlay.classList.contains('show')) hideConfirm();
+  });
+
+  let state = {
+    projectName: 'Untitled Story',
+    boards: [{ id: 'b1', name: 'Main board' }],
+    activeBoard: 'b1',
+    nodesByBoard: { b1: [] },
+    connectorsByBoard: { b1: [] },
+  };
+
+  let view = { x: 0, y: 0, scale: 1 };
+  let saveTimeout = null;
+  let dragState = null;
+  let connectMode = false;
+  let connectFrom = null;
+  let selectedNode = null;
+  let resizeState = null;
+
+  function uid(prefix) { return (prefix||'n') + Date.now() + Math.random().toString(36).slice(2,7); }
+
+  function currentNodes() { return state.nodesByBoard[state.activeBoard]; }
+  function currentConnectors() { return state.connectorsByBoard[state.activeBoard]; }
+
+  function flashSaved() {
+    saveIndicator.classList.add('show');
+    clearTimeout(saveIndicator._t);
+    saveIndicator._t = setTimeout(() => saveIndicator.classList.remove('show'), 900);
+  }
+
+  /* ---------------- LOCAL STORAGE (IndexedDB) ----------------
+     State (text, positions, boards) lives in the 'kv' store; images live
+     separately in the 'images' store so saving text never rewrites image data. */
+  const DB_NAME = 'story-canvas';
+  const imageCache = {};
+  let dbPromise = null;
+  let storageBroken = false;
+
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+        if (!db.objectStoreNames.contains('images')) db.createObjectStore('images');
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  function idbGet(store, key) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readonly');
+      const r = tx.objectStore(store).get(key);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    }));
+  }
+
+  function idbSet(store, key, value) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
+  function idbDelete(store, key) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readwrite');
+      tx.objectStore(store).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
+  function markStorageBroken() {
+    if (storageBroken) return;
+    storageBroken = true;
+    const note = $('cv-storage-note');
+    note.textContent = 'Saving is blocked in this browser. Your work only lives in this window \u2014 use Export before closing, and try Chrome or Edge.';
+    note.style.color = 'var(--wax)';
+  }
+
+  function persist() {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(async () => {
+      try {
+        await idbSet('kv', 'state', JSON.parse(JSON.stringify(state)));
+        flashSaved();
+      } catch (e) {
+        console.error('save failed', e);
+        markStorageBroken();
+      }
+    }, 350);
+  }
+
+  async function load() {
+    try {
+      const saved = await idbGet('kv', 'state');
+      if (saved && saved.boards) state = saved;
+      const keys = [];
+      Object.values(state.nodesByBoard).forEach(nodes => {
+        (nodes || []).forEach(n => { if (n.imageKey) keys.push(n.imageKey); });
+      });
+      await Promise.all(keys.map(k =>
+        idbGet('images', k).then(v => { if (v) imageCache[k] = v; }).catch(() => {})
+      ));
+    } catch (e) {
+      console.error('load failed', e);
+      markStorageBroken();
+    }
+    nameEl.value = state.projectName || 'Untitled Story';
+    renderBoardList();
+    renderAll();
+  }
+
+  function applyTransform() {
+    canvas.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+    svg.style.transform = canvas.style.transform;
+    zoomPct.textContent = Math.round(view.scale * 100) + '%';
+  }
+
+  function screenToCanvas(clientX, clientY) {
+    const rect = wrap.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - view.x) / view.scale,
+      y: (clientY - rect.top - view.y) / view.scale,
+    };
+  }
+
+  /* ---------------- PAN & ZOOM ---------------- */
+  wrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      const rect = wrap.getBoundingClientRect();
+      const cx = e.clientX - rect.left;
+      const cy = e.clientY - rect.top;
+      const prevScale = view.scale;
+      let newScale = prevScale * (1 - e.deltaY * 0.0015);
+      newScale = Math.min(2.5, Math.max(0.25, newScale));
+      view.x = cx - ((cx - view.x) / prevScale) * newScale;
+      view.y = cy - ((cy - view.y) / prevScale) * newScale;
+      view.scale = newScale;
+    } else {
+      view.x -= e.deltaX;
+      view.y -= e.deltaY;
+    }
+    applyTransform();
+  }, { passive: false });
+
+  let spacePan = null;
+  wrap.addEventListener('mousedown', (e) => {
+    if (e.target === wrap || e.target === canvas) {
+      spacePan = { startX: e.clientX, startY: e.clientY, ox: view.x, oy: view.y };
+      wrap.classList.add('panning');
+      selectNode(null);
+    }
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (spacePan) {
+      view.x = spacePan.ox + (e.clientX - spacePan.startX);
+      view.y = spacePan.oy + (e.clientY - spacePan.startY);
+      applyTransform();
+    }
+  });
+  window.addEventListener('mouseup', () => {
+    spacePan = null;
+    wrap.classList.remove('panning');
+  });
+
+  $('cv-zoom-in').onclick = () => zoomBy(1.15);
+  $('cv-zoom-out').onclick = () => zoomBy(0.87);
+  $('cv-zoom-reset').onclick = () => { view = { x: 0, y: 0, scale: 1 }; applyTransform(); };
+  function zoomBy(factor) {
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    const prevScale = view.scale;
+    let newScale = Math.min(2.5, Math.max(0.25, prevScale * factor));
+    view.x = cx - ((cx - view.x) / prevScale) * newScale;
+    view.y = cy - ((cy - view.y) / prevScale) * newScale;
+    view.scale = newScale;
+    applyTransform();
+  }
+
+  $('cv-sidebar-toggle').onclick = () => $('cv-sidebar').classList.toggle('collapsed');
+
+  // Fullscreen toggle
+  const fsBtn = $('cv-fullscreen-btn');
+  function updateFsBtn() {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    fsBtn.classList.toggle('is-fullscreen', isFs);
+    fsBtn.title = isFs ? 'Exit fullscreen' : 'Fullscreen';
+    fsBtn.textContent = isFs ? '\u2715' : '\u26F6';
+  }
+  fsBtn.onclick = () => {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (!isFs) {
+      const el = document.documentElement;
+      (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    }
+  };
+  document.addEventListener('fullscreenchange', updateFsBtn);
+  document.addEventListener('webkitfullscreenchange', updateFsBtn);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F11') {
+      e.preventDefault();
+      fsBtn.click();
+    }
+  });
+
+  // Exit / close button
+  $('cv-exit-btn').onclick = () => {
+    const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (isFs) {
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    }
+    const closed = window.close();
+    if (closed === undefined) {
+      // Most browsers can't close windows they didn't open — show a clear message
+      showConfirm({
+        title: 'Ready to close',
+        msg: 'Your work is saved. You can now close this window.',
+        okLabel: 'Got it',
+        hideCancel: true,
+        onConfirm: () => {},
+      });
+    }
+  };
+
+  /* ---------------- BOARDS ---------------- */
+  function renderBoardList() {
+    boardlistEl.innerHTML = '';
+    state.boards.forEach(b => {
+      const item = document.createElement('div');
+      item.className = 'cv-board-item' + (b.id === state.activeBoard ? ' active' : '');
+      const input = document.createElement('input');
+      input.className = 'cv-board-name-input';
+      input.value = b.name;
+      input.onclick = (e) => e.stopPropagation();
+      input.oninput = () => { b.name = input.value; persist(); };
+      item.appendChild(input);
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'cv-board-delete';
+      delBtn.textContent = '\u2715';
+      delBtn.title = 'Delete board';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (state.boards.length <= 1) {
+          showConfirm({
+            title: "Can't delete the last board",
+            msg: "Every story needs at least one board. Create a new one before deleting this.",
+            okLabel: 'Got it',
+            hideCancel: true,
+            onConfirm: () => {},
+          });
+          return;
+        }
+        const cardCount = (state.nodesByBoard[b.id] || []).length;
+        showConfirm({
+          title: `Delete "${b.name}"?`,
+          msg: cardCount
+            ? `This board has ${cardCount} card${cardCount === 1 ? '' : 's'} on it. Deleting it removes them permanently.`
+            : "This can't be undone.",
+          okLabel: 'Delete board',
+          onConfirm: () => {
+            (state.nodesByBoard[b.id] || []).forEach(cleanupNodeImage);
+            state.boards = state.boards.filter(bd => bd.id !== b.id);
+            delete state.nodesByBoard[b.id];
+            delete state.connectorsByBoard[b.id];
+            if (state.activeBoard === b.id) {
+              state.activeBoard = state.boards[0].id;
+            }
+            renderBoardList();
+            renderAll();
+            persist();
+          },
+        });
+      };
+      item.appendChild(delBtn);
+
+      item.onclick = () => {
+        state.activeBoard = b.id;
+        if (!state.nodesByBoard[b.id]) state.nodesByBoard[b.id] = [];
+        if (!state.connectorsByBoard[b.id]) state.connectorsByBoard[b.id] = [];
+        renderBoardList();
+        renderAll();
+      };
+      boardlistEl.appendChild(item);
+    });
+  }
+
+  $('cv-new-board-btn').onclick = () => {
+    const id = uid('b');
+    state.boards.push({ id, name: 'New board' });
+    state.nodesByBoard[id] = [];
+    state.connectorsByBoard[id] = [];
+    state.activeBoard = id;
+    renderBoardList();
+    renderAll();
+    persist();
+  };
+
+  nameEl.oninput = () => {
+    state.projectName = nameEl.value;
+    nameEl.style.height = 'auto';
+    nameEl.style.height = nameEl.scrollHeight + 'px';
+    persist();
+  };
+
+  /* ---------------- BACKUP ---------------- */
+  $('cv-export-btn').onclick = () => {
+    const images = {};
+    Object.values(state.nodesByBoard).forEach(nodes => {
+      (nodes || []).forEach(n => {
+        if (n.imageKey && imageCache[n.imageKey]) images[n.imageKey] = imageCache[n.imageKey];
+      });
+    });
+    const payload = { app: 'story-canvas', version: 1, exportedAt: new Date().toISOString(), state, images };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.download = `story-canvas-backup-${stamp}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  };
+
+  $('cv-import-btn').onclick = () => $('cv-import-input').click();
+  $('cv-import-input').onchange = () => {
+    const file = $('cv-import-input').files && $('cv-import-input').files[0];
+    $('cv-import-input').value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let payload;
+      try {
+        payload = JSON.parse(reader.result);
+      } catch (e) {
+        showConfirm({ title: "Couldn't read that file", msg: 'It doesn\u2019t look like a Story Canvas backup.', okLabel: 'OK', hideCancel: true, onConfirm: () => {} });
+        return;
+      }
+      if (!payload || payload.app !== 'story-canvas' || !payload.state || !payload.state.boards) {
+        showConfirm({ title: "Couldn't read that file", msg: 'It doesn\u2019t look like a Story Canvas backup.', okLabel: 'OK', hideCancel: true, onConfirm: () => {} });
+        return;
+      }
+      showConfirm({
+        title: 'Import this backup?',
+        msg: 'This replaces everything currently on your boards with the backup\u2019s contents.',
+        okLabel: 'Import & replace',
+        onConfirm: async () => {
+          state = payload.state;
+          const images = payload.images || {};
+          const writes = Object.entries(images).map(([k, v]) => {
+            imageCache[k] = v;
+            return idbSet('images', k, v).catch(() => markStorageBroken());
+          });
+          await Promise.all(writes);
+          selectedNode = null;
+          nameEl.value = state.projectName || 'Untitled Story';
+          renderBoardList();
+          renderAll();
+          persist();
+        },
+      });
+    };
+    reader.readAsText(file);
+  };
+
+  /* ---------------- NODES ---------------- */
+  function addNode(type) {
+    const rect = wrap.getBoundingClientRect();
+    const center = screenToCanvas(rect.left + rect.width / 2 + (Math.random()*80-40), rect.top + rect.height / 2 + (Math.random()*80-40));
+    const node = {
+      id: uid('nd'),
+      type,
+      title: '',
+      body: '',
+      imageUrl: '',
+      x: center.x - 110,
+      y: center.y - 60,
+      w: 240,
+      h: type === 'image' ? 260 : 160,
+    };
+    currentNodes().push(node);
+    renderAll();
+    persist();
+    setTimeout(() => {
+      const el = canvas.querySelector(`[data-id="${node.id}"] .cv-node-title`);
+      if (el) el.focus();
+    }, 30);
+  }
+
+  $('cv-add-note-btn').onclick = () => addNode('note');
+  $('cv-add-img-btn').onclick = () => addNode('image');
+
+  $('cv-connect-btn').onclick = () => {
+    connectMode = !connectMode;
+    connectFrom = null;
+    wrap.classList.toggle('connecting', connectMode);
+    $('cv-connect-btn').style.background = connectMode ? 'var(--wax-dim)' : '';
+    $('cv-connect-btn').style.color = connectMode ? '#1C1A17' : '';
+  };
+
+  function selectNode(id) {
+    selectedNode = id;
+    canvas.querySelectorAll('.cv-node').forEach(el => {
+      el.classList.toggle('selected', el.dataset.id === id);
+    });
+    renderLayerList();
+  }
+
+  function cleanupNodeImage(node) {
+    if (node && node.imageKey) {
+      delete imageCache[node.imageKey];
+      idbDelete('images', node.imageKey).catch(() => {});
+    }
+  }
+
+  function deleteNode(nodeId) {
+    const idx = currentNodes().findIndex(n => n.id === nodeId);
+    if (idx < 0) return;
+    cleanupNodeImage(currentNodes()[idx]);
+    currentNodes().splice(idx, 1);
+    state.connectorsByBoard[state.activeBoard] = currentConnectors().filter(c => c.from !== nodeId && c.to !== nodeId);
+    if (selectedNode === nodeId) selectedNode = null;
+    renderAll();
+    persist();
+  }
+
+  function confirmDeleteNode(nodeId) {
+    const node = currentNodes().find(n => n.id === nodeId);
+    if (!node) return;
+    const name = nodeDisplayName(node);
+    showConfirm({
+      title: `Delete "${name}"?`,
+      msg: "This can't be undone. Any connections to this card will be removed too.",
+      okLabel: 'Delete card',
+      onConfirm: () => deleteNode(nodeId),
+    });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedNode) {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) return;
+      confirmDeleteNode(selectedNode);
+    }
+  });
+
+  window.addEventListener('paste', (e) => {
+    const active = document.activeElement;
+    const withinCard = active && active.closest && active.closest('.cv-node');
+    if (withinCard) return; // handled by the card's own onpaste
+    if (!selectedNode) return;
+    const node = currentNodes().find(n => n.id === selectedNode);
+    if (!node || node.type !== 'image') return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) { handleImageFile(file, node); e.preventDefault(); }
+        return;
+      }
+    }
+  });
+
+  function handleImageFile(file, node) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        const maxDim = 1600;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const scale = maxDim / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvasEl = document.createElement('canvas');
+        canvasEl.width = width;
+        canvasEl.height = height;
+        const ctx = canvasEl.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        const quality = file.type === 'image/png' ? undefined : 0.87;
+        const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+        const dataUrl = canvasEl.toDataURL(mime, quality);
+
+        const oldKey = node.imageKey;
+        const key = uid('img');
+        try {
+          await idbSet('images', key, dataUrl);
+        } catch (e) {
+          console.error('image save failed', e);
+          markStorageBroken();
+        }
+        imageCache[key] = dataUrl;
+        node.imageKey = key;
+        node.imageUrl = '';
+        if (oldKey) {
+          delete imageCache[oldKey];
+          idbDelete('images', oldKey).catch(() => {});
+        }
+        persist();
+        refreshNodeInPlace(node.id);
+      };
+      img.onerror = () => {
+        refreshNodeInPlace(node.id);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function nodeTypeMeta(type) {
+    if (type === 'idea') return { dotClass: 'type-idea' };
+    if (type === 'profile') return { dotClass: 'type-profile' };
+    if (type === 'image') return { dotClass: 'type-image' };
+    return { dotClass: 'type-note' };
+  }
+
+  function renderNode(node) {
+    if (node.type === 'image') return renderImageNode(node);
+    return renderTextNode(node);
+  }
+
+  function nodeImageSrc(node) {
+    if (node.imageKey) {
+      const cached = imageCache[node.imageKey];
+      if (cached) return cached;
+      idbGet('images', node.imageKey).then(v => {
+        if (v) { imageCache[node.imageKey] = v; refreshNodeInPlace(node.id); }
+      }).catch(() => {});
+      return null;
+    }
+    return node.imageUrl || null;
+  }
+
+  function renderImageNode(node) {
+    const el = document.createElement('div');
+    el.className = 'cv-node cv-node-bare-image';
+    el.dataset.id = node.id;
+    el.style.left = node.x + 'px';
+    el.style.top = node.y + 'px';
+    el.style.width = node.w + 'px';
+    el.style.height = (node.h || 200) + 'px';
+
+    if (node.showLabel && node.labelPos === 'above') {
+      el.appendChild(renderLabelStrip(node, 'above'));
+    }
+
+    const imgWrap = document.createElement('div');
+    imgWrap.className = 'cv-node-img-wrap';
+    const src = nodeImageSrc(node);
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src;
+      img.draggable = false;
+      img.onerror = () => { imgWrap.innerHTML = '<div class="cv-node-img-placeholder">Couldn\'t load that image</div>'; };
+      imgWrap.appendChild(img);
+    } else if (node.imageKey) {
+      imgWrap.innerHTML = '<div class="cv-node-img-placeholder">Loading image\u2026</div>';
+    } else {
+      imgWrap.innerHTML = '<div class="cv-node-img-placeholder">Paste (Ctrl/Cmd+V), drop a file here,<br>or use the buttons below</div>';
+    }
+
+    imgWrap.ondragover = (e) => { e.preventDefault(); imgWrap.classList.add('dragover'); };
+    imgWrap.ondragleave = () => imgWrap.classList.remove('dragover');
+    imgWrap.ondrop = (e) => {
+      e.preventDefault();
+      imgWrap.classList.remove('dragover');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleImageFile(file, node);
+    };
+
+    // dragging the image itself moves the card (no header bar on bare images)
+    imgWrap.onpointerdown = (e) => {
+      if (e.target.closest('.cv-node-float-btn') || e.target.closest('.cv-node-resize') || e.target.closest('.cv-handle') || e.target.closest('.cv-node-img-actions')) return;
+      e.stopPropagation();
+      selectNode(node.id);
+      el.focus({ preventScroll: true });
+      dragState = { node, startX: e.clientX, startY: e.clientY, startNodeX: node.x, startNodeY: node.y };
+      el.classList.add('dragging');
+      window.addEventListener('pointermove', onDragMove);
+      window.addEventListener('pointerup', onDragUp);
+    };
+
+    el.tabIndex = -1;
+    el.onpaste = (e) => {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) { handleImageFile(file, node); e.preventDefault(); }
+          return;
+        }
+      }
+    };
+
+    // floating hover controls: add/remove label, connect, replace, delete
+    const floatControls = document.createElement('div');
+    floatControls.className = 'cv-node-float-controls';
+
+    const labelBtn = document.createElement('button');
+    labelBtn.className = 'cv-node-float-btn';
+    labelBtn.title = node.showLabel ? 'Remove title/caption' : 'Add title/caption';
+    labelBtn.textContent = 'T';
+    labelBtn.onpointerdown = (e) => e.stopPropagation();
+    labelBtn.onclick = (e) => {
+      e.stopPropagation();
+      node.showLabel = !node.showLabel;
+      if (node.showLabel && !node.labelPos) node.labelPos = 'below';
+      persist();
+      refreshNodeInPlace(node.id);
+    };
+
+    const connectHandle = document.createElement('div');
+    connectHandle.className = 'cv-handle';
+    connectHandle.style.position = 'static';
+    connectHandle.style.width = '18px';
+    connectHandle.style.height = '18px';
+    connectHandle.title = 'Drag to connect';
+    connectHandle.onpointerdown = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      startConnectorDrag(node, e);
+    };
+
+    const replaceBtn = document.createElement('button');
+    replaceBtn.className = 'cv-node-float-btn';
+    replaceBtn.title = 'Replace image';
+    replaceBtn.textContent = '\u21bb';
+    replaceBtn.onpointerdown = (e) => e.stopPropagation();
+    const replaceInput = document.createElement('input');
+    replaceInput.type = 'file';
+    replaceInput.accept = 'image/*';
+    replaceInput.style.display = 'none';
+    replaceInput.onchange = () => {
+      const file = replaceInput.files && replaceInput.files[0];
+      if (file) handleImageFile(file, node);
+    };
+    replaceBtn.onclick = (e) => { e.stopPropagation(); replaceInput.click(); };
+
+    const delBtnFloat = document.createElement('button');
+    delBtnFloat.className = 'cv-node-float-btn';
+    delBtnFloat.title = 'Delete image';
+    delBtnFloat.textContent = '\u2715';
+    delBtnFloat.onpointerdown = (e) => e.stopPropagation();
+    delBtnFloat.onclick = (e) => { e.stopPropagation(); confirmDeleteNode(node.id); };
+
+    floatControls.appendChild(labelBtn);
+    floatControls.appendChild(replaceBtn);
+    floatControls.appendChild(connectHandle);
+    floatControls.appendChild(delBtnFloat);
+    floatControls.appendChild(replaceInput);
+    imgWrap.appendChild(floatControls);
+
+    if (!src && !node.imageKey) {
+      const actions = document.createElement('div');
+      actions.className = 'cv-node-img-actions';
+      actions.style.position = 'absolute';
+      actions.style.bottom = '8px';
+      actions.style.left = '8px';
+      actions.style.right = '8px';
+
+      const uploadBtn = document.createElement('button');
+      uploadBtn.textContent = 'Choose file';
+      uploadBtn.onpointerdown = (e) => e.stopPropagation();
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.style.display = 'none';
+      fileInput.onchange = () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) handleImageFile(file, node);
+      };
+      uploadBtn.onclick = (e) => { e.stopPropagation(); fileInput.click(); };
+
+      const urlBtn = document.createElement('button');
+      urlBtn.textContent = 'Use a URL';
+      urlBtn.onpointerdown = (e) => e.stopPropagation();
+      urlBtn.onclick = (e) => {
+        e.stopPropagation();
+        const url = prompt('Paste an image URL:');
+        if (url) { node.imageUrl = url; persist(); refreshNodeInPlace(node.id); }
+      };
+
+      actions.appendChild(uploadBtn);
+      actions.appendChild(urlBtn);
+      actions.appendChild(fileInput);
+      imgWrap.appendChild(actions);
+    }
+
+    // resize handle lives on the image area itself
+    const resize = document.createElement('div');
+    resize.className = 'cv-node-resize';
+    resize.innerHTML = '<svg viewBox="0 0 14 14"><path d="M12 2 L2 12 M12 7 L7 12" stroke="currentColor" stroke-width="1.4"/></svg>';
+    resize.onpointerdown = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      resizeState = { node, startX: e.clientX, startY: e.clientY, startW: node.w, startH: node.h || 200 };
+      window.addEventListener('pointermove', onResizeMove);
+      window.addEventListener('pointerup', onResizeUp);
+    };
+    imgWrap.appendChild(resize);
+
+    el.appendChild(imgWrap);
+
+    if (node.showLabel && node.labelPos === 'below') {
+      el.appendChild(renderLabelStrip(node, 'below'));
+    }
+
+    el.onclick = (e) => {
+      e.stopPropagation();
+      if (connectMode) {
+        if (!connectFrom) {
+          connectFrom = node.id;
+          el.classList.add('selected');
+        } else if (connectFrom !== node.id) {
+          currentConnectors().push({ id: uid('cn'), from: connectFrom, to: node.id, label: '' });
+          connectMode = false;
+          connectFrom = null;
+          wrap.classList.remove('connecting');
+          $('cv-connect-btn').style.background = '';
+          $('cv-connect-btn').style.color = '';
+          renderAll();
+          persist();
+        }
+      } else {
+        selectNode(node.id);
+      }
+    };
+
+    return el;
+  }
+
+  function renderLabelStrip(node, pos) {
+    const strip = document.createElement('div');
+    strip.className = 'cv-node-label-strip pos-' + pos;
+    strip.onpointerdown = (e) => e.stopPropagation();
+
+    const titleInput = document.createElement('input');
+    titleInput.className = 'cv-node-label-title';
+    titleInput.placeholder = 'Title';
+    titleInput.value = node.title || '';
+    titleInput.oninput = () => { node.title = titleInput.value; persist(); renderLayerList(); };
+
+    const caption = document.createElement('textarea');
+    caption.className = 'cv-node-label-caption';
+    caption.placeholder = 'Caption or note...';
+    caption.value = node.body || '';
+    caption.rows = 1;
+    caption.oninput = () => {
+      node.body = caption.value;
+      caption.style.height = 'auto';
+      caption.style.height = caption.scrollHeight + 'px';
+      persist();
+    };
+
+    const controlsRow = document.createElement('div');
+    controlsRow.style.display = 'flex';
+    controlsRow.style.justifyContent = 'space-between';
+    controlsRow.style.alignItems = 'center';
+
+    const flipBtn = document.createElement('button');
+    flipBtn.className = 'cv-node-label-remove';
+    flipBtn.textContent = pos === 'above' ? 'move below \u2193' : 'move above \u2191';
+    flipBtn.onclick = () => {
+      node.labelPos = pos === 'above' ? 'below' : 'above';
+      persist();
+      refreshNodeInPlace(node.id);
+    };
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'cv-node-label-remove';
+    removeBtn.textContent = 'remove label';
+    removeBtn.onclick = () => {
+      node.showLabel = false;
+      persist();
+      refreshNodeInPlace(node.id);
+    };
+
+    controlsRow.appendChild(flipBtn);
+    controlsRow.appendChild(removeBtn);
+
+    strip.appendChild(titleInput);
+    strip.appendChild(caption);
+    strip.appendChild(controlsRow);
+
+    requestAnimationFrame(() => { caption.style.height = 'auto'; caption.style.height = caption.scrollHeight + 'px'; });
+
+    return strip;
+  }
+
+  function renderTextNode(node) {
+    const el = document.createElement('div');
+    el.className = 'cv-node';
+    el.dataset.id = node.id;
+    el.style.left = node.x + 'px';
+    el.style.top = node.y + 'px';
+    el.style.width = node.w + 'px';
+    if (node.h) el.style.height = node.h + 'px';
+
+    const head = document.createElement('div');
+    head.className = 'cv-node-head';
+    const dot = document.createElement('span');
+    dot.className = 'cv-node-dot ' + nodeTypeMeta(node.type).dotClass;
+    const titleInput = document.createElement('input');
+    titleInput.className = 'cv-node-title';
+    titleInput.placeholder = 'Untitled';
+    titleInput.value = node.title || '';
+    titleInput.onpointerdown = (e) => e.stopPropagation();
+    titleInput.oninput = () => { node.title = titleInput.value; persist(); renderLayerList(); };
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'cv-node-close';
+    closeBtn.textContent = '\u2715';
+    closeBtn.onpointerdown = (e) => e.stopPropagation();
+    closeBtn.onclick = () => {
+      confirmDeleteNode(node.id);
+    };
+    head.appendChild(dot);
+    head.appendChild(titleInput);
+    head.appendChild(closeBtn);
+    el.appendChild(head);
+
+    const body = document.createElement('textarea');
+    body.className = 'cv-node-body';
+    body.placeholder = 'Write here...';
+    body.value = node.body || '';
+    body.style.flex = '1';
+    body.onpointerdown = (e) => e.stopPropagation();
+    body.oninput = () => { node.body = body.value; persist(); };
+    el.appendChild(body);
+
+    const resize = document.createElement('div');
+    resize.className = 'cv-node-resize';
+    resize.innerHTML = '<svg viewBox="0 0 14 14"><path d="M12 2 L2 12 M12 7 L7 12" stroke="currentColor" stroke-width="1.4"/></svg>';
+    resize.onpointerdown = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      resizeState = { node, startX: e.clientX, startY: e.clientY, startW: node.w, startH: node.h || 160 };
+      window.addEventListener('pointermove', onResizeMove);
+      window.addEventListener('pointerup', onResizeUp);
+    };
+    el.appendChild(resize);
+
+    const handle = document.createElement('div');
+    handle.className = 'cv-handle';
+    handle.style.right = '-6px';
+    handle.style.top = '18px';
+    handle.onpointerdown = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      startConnectorDrag(node, e);
+    };
+    el.appendChild(handle);
+
+    head.onpointerdown = (e) => {
+      if (e.target !== head && e.target !== dot) return;
+      e.stopPropagation();
+      selectNode(node.id);
+      dragState = {
+        node, startX: e.clientX, startY: e.clientY,
+        startNodeX: node.x, startNodeY: node.y,
+      };
+      el.classList.add('dragging');
+      window.addEventListener('pointermove', onDragMove);
+      window.addEventListener('pointerup', onDragUp);
+    };
+
+    el.onclick = (e) => {
+      e.stopPropagation();
+      if (connectMode) {
+        if (!connectFrom) {
+          connectFrom = node.id;
+          el.classList.add('selected');
+        } else if (connectFrom !== node.id) {
+          currentConnectors().push({ id: uid('cn'), from: connectFrom, to: node.id, label: '' });
+          connectMode = false;
+          connectFrom = null;
+          wrap.classList.remove('connecting');
+          $('cv-connect-btn').style.background = '';
+          $('cv-connect-btn').style.color = '';
+          renderAll();
+          persist();
+        }
+      } else {
+        selectNode(node.id);
+      }
+    };
+
+    return el;
+  }
+
+  function onDragMove(e) {
+    if (!dragState) return;
+    const dx = (e.clientX - dragState.startX) / view.scale;
+    const dy = (e.clientY - dragState.startY) / view.scale;
+    dragState.node.x = dragState.startNodeX + dx;
+    dragState.node.y = dragState.startNodeY + dy;
+    const el = canvas.querySelector(`[data-id="${dragState.node.id}"]`);
+    if (el) {
+      el.style.left = dragState.node.x + 'px';
+      el.style.top = dragState.node.y + 'px';
+    }
+    renderConnectors();
+  }
+  function onDragUp() {
+    if (dragState) {
+      const el = canvas.querySelector(`[data-id="${dragState.node.id}"]`);
+      if (el) el.classList.remove('dragging');
+    }
+    dragState = null;
+    window.removeEventListener('pointermove', onDragMove);
+    window.removeEventListener('pointerup', onDragUp);
+    persist();
+    renderLayerList();
+  }
+
+  function onResizeMove(e) {
+    if (!resizeState) return;
+    const dx = (e.clientX - resizeState.startX) / view.scale;
+    const dy = (e.clientY - resizeState.startY) / view.scale;
+    const isImage = resizeState.node.type === 'image';
+    resizeState.node.w = Math.max(isImage ? 80 : 160, resizeState.startW + dx);
+    resizeState.node.h = Math.max(isImage ? 60 : 100, resizeState.startH + dy);
+    const el = canvas.querySelector(`[data-id="${resizeState.node.id}"]`);
+    if (el) {
+      el.style.width = resizeState.node.w + 'px';
+      el.style.height = resizeState.node.h + 'px';
+    }
+    renderConnectors();
+  }
+  function onResizeUp() {
+    resizeState = null;
+    window.removeEventListener('pointermove', onResizeMove);
+    window.removeEventListener('pointerup', onResizeUp);
+    persist();
+  }
+
+  let tempConnector = null;
+  function startConnectorDrag(node, e) {
+    tempConnector = { fromNode: node, x2: null, y2: null };
+    window.addEventListener('pointermove', onConnectorDragMove);
+    window.addEventListener('pointerup', onConnectorDragUp);
+  }
+  function onConnectorDragMove(e) {
+    if (!tempConnector) return;
+    const p = screenToCanvas(e.clientX, e.clientY);
+    tempConnector.x2 = p.x;
+    tempConnector.y2 = p.y;
+    renderConnectors();
+  }
+  function onConnectorDragUp(e) {
+    if (tempConnector) {
+      const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+      const nodeEl = targetEl ? targetEl.closest('.cv-node') : null;
+      if (nodeEl && nodeEl.dataset.id !== tempConnector.fromNode.id) {
+        currentConnectors().push({ id: uid('cn'), from: tempConnector.fromNode.id, to: nodeEl.dataset.id, label: '' });
+        persist();
+      }
+    }
+    tempConnector = null;
+    window.removeEventListener('pointermove', onConnectorDragMove);
+    window.removeEventListener('pointerup', onConnectorDragUp);
+    renderConnectors();
+  }
+
+  function nodeCenter(node, edge) {
+    const w = node.w || 240;
+    const h = node.h || 160;
+    if (edge === 'right') return { x: node.x + w, y: node.y + 24 };
+    return { x: node.x + w/2, y: node.y + h/2 };
+  }
+
+  function wobblyPath(x1, y1, x2, y2) {
+    const mx = (x1 + x2) / 2;
+    const dx = (x2 - x1) * 0.35;
+    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+  }
+
+  function renderConnectors() {
+    svg.innerHTML = '';
+    const nodes = currentNodes();
+    const byId = {};
+    nodes.forEach(n => byId[n.id] = n);
+
+    currentConnectors().forEach(conn => {
+      const from = byId[conn.from], to = byId[conn.to];
+      if (!from || !to) return;
+      const p1 = nodeCenter(from, 'right');
+      const p2 = { x: to.x, y: to.y + 24 };
+      const d = wobblyPath(p1.x, p1.y, p2.x, p2.y);
+
+      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      hit.setAttribute('d', d);
+      hit.setAttribute('class', 'cv-connector-hit');
+      hit.style.pointerEvents = 'stroke';
+      hit.onclick = (e) => {
+        e.stopPropagation();
+        state.connectorsByBoard[state.activeBoard] = currentConnectors().filter(c => c.id !== conn.id);
+        renderAll();
+        persist();
+      };
+      svg.appendChild(hit);
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'cv-connector-path');
+      path.style.pointerEvents = 'none';
+      svg.appendChild(path);
+    });
+
+    if (tempConnector && tempConnector.x2 !== null) {
+      const p1 = nodeCenter(tempConnector.fromNode, 'right');
+      const d = wobblyPath(p1.x, p1.y, tempConnector.x2, tempConnector.y2);
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'cv-connector-path');
+      path.setAttribute('stroke-dasharray', '5 4');
+      path.style.pointerEvents = 'none';
+      svg.appendChild(path);
+    }
+  }
+
+  function renderAll() {
+    canvas.innerHTML = '';
+    const nodes = currentNodes();
+    emptyHint.style.display = nodes.length ? 'none' : 'block';
+    nodes.forEach(node => canvas.appendChild(renderNode(node)));
+    if (selectedNode) selectNode(selectedNode);
+    renderConnectors();
+    renderLayerList();
+  }
+
+  function nodeDisplayName(node) {
+    if (node.title && node.title.trim()) return node.title.trim();
+    if (node.type === 'image') return '(untitled image)';
+    return '(untitled note)';
+  }
+
+  function renderLayerList() {
+    const nodes = currentNodes();
+    layerlistEl.innerHTML = '';
+    if (!nodes.length) {
+      const empty = document.createElement('div');
+      empty.className = 'cv-layer-empty';
+      empty.textContent = 'No cards yet on this board.';
+      layerlistEl.appendChild(empty);
+      return;
+    }
+    // show topmost (last in array, rendered on top) first in the list
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const node = nodes[i];
+      const item = document.createElement('div');
+      item.className = 'cv-layer-item' + (node.id === selectedNode ? ' active' : '');
+
+      const dot = document.createElement('span');
+      dot.className = 'cv-node-dot ' + nodeTypeMeta(node.type).dotClass;
+      dot.style.flexShrink = '0';
+
+      const name = document.createElement('span');
+      name.className = 'cv-layer-name';
+      name.textContent = nodeDisplayName(node);
+
+      const forwardBtn = document.createElement('button');
+      forwardBtn.className = 'cv-layer-btn';
+      forwardBtn.title = 'Bring forward';
+      forwardBtn.textContent = '\u2191';
+      forwardBtn.onclick = (e) => { e.stopPropagation(); bringForward(node.id); };
+
+      const backBtn = document.createElement('button');
+      backBtn.className = 'cv-layer-btn';
+      backBtn.title = 'Send backward';
+      backBtn.textContent = '\u2193';
+      backBtn.onclick = (e) => { e.stopPropagation(); sendBackward(node.id); };
+
+      item.appendChild(dot);
+      item.appendChild(name);
+      item.appendChild(forwardBtn);
+      item.appendChild(backBtn);
+      item.onclick = () => focusOnNode(node.id);
+
+      layerlistEl.appendChild(item);
+    }
+  }
+
+  function bringForward(nodeId) {
+    const nodes = currentNodes();
+    const idx = nodes.findIndex(n => n.id === nodeId);
+    if (idx < 0 || idx === nodes.length - 1) return;
+    const [node] = nodes.splice(idx, 1);
+    nodes.push(node);
+    renderAll();
+    persist();
+  }
+
+  function sendBackward(nodeId) {
+    const nodes = currentNodes();
+    const idx = nodes.findIndex(n => n.id === nodeId);
+    if (idx <= 0) return;
+    const [node] = nodes.splice(idx, 1);
+    nodes.unshift(node);
+    renderAll();
+    persist();
+  }
+
+  function focusOnNode(nodeId) {
+    const node = currentNodes().find(n => n.id === nodeId);
+    if (!node) return;
+    selectNode(nodeId);
+    const rect = wrap.getBoundingClientRect();
+    const w = node.w || 240, h = node.h || 160;
+    view.scale = 1;
+    view.x = rect.width / 2 - (node.x + w / 2);
+    view.y = rect.height / 2 - (node.y + h / 2);
+    applyTransform();
+  }
+
+  function refreshNodeInPlace(nodeId) {
+    const node = currentNodes().find(n => n.id === nodeId);
+    const oldEl = canvas.querySelector(`[data-id="${nodeId}"]`);
+    if (!node || !oldEl) return;
+    const newEl = renderNode(node);
+    if (selectedNode === nodeId) newEl.classList.add('selected');
+    oldEl.replaceWith(newEl);
+    renderConnectors();
+  }
+
+  applyTransform();
+  load();
+})();
+</script>
+</body>
+</html>
