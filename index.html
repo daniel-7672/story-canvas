@@ -120,13 +120,6 @@
   }
   #cv-new-board-btn:hover { color: var(--wax); border-color: var(--wax-dim); }
 
-  #cv-layers-head {
-    padding: 12px 16px 6px 16px; margin-top: 6px; border-top: 1px dashed var(--border);
-  }
-  #cv-layers-head .eyebrow {
-    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--text-faint);
-  }
   .cv-layerlist {
     max-height: 200px; min-height: 0; overflow-y: auto; padding: 0 8px; display: flex; flex-direction: column; gap: 2px;
   }
@@ -385,34 +378,6 @@
   }
   .cv-node-float-btn:hover { color: var(--wax); border-color: var(--wax-dim); }
 
-  .cv-node-label-strip {
-    background: var(--surface);
-    border: 1px solid var(--border-soft);
-    border-radius: 5px;
-    padding: 6px 9px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-  }
-  .cv-node-label-strip.pos-above { margin-bottom: 6px; }
-  .cv-node-label-strip.pos-below { margin-top: 6px; }
-  .cv-node-label-title {
-    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px;
-    background: transparent; border: none; color: var(--text); width: 100%; cursor: text;
-  }
-  .cv-node-label-title::placeholder { color: var(--text-faint); font-weight: 500; }
-  .cv-node-label-caption {
-    font-family: 'Inter', sans-serif; font-size: 11.5px; line-height: 1.4; color: var(--text-dim);
-    background: transparent; border: none; resize: none; width: 100%; cursor: text; min-height: 20px;
-  }
-  .cv-node-label-caption::placeholder { color: var(--text-faint); font-style: italic; }
-  .cv-node-label-remove {
-    align-self: flex-end;
-    background: none; border: none; color: var(--text-faint); cursor: pointer;
-    font-family: 'JetBrains Mono', monospace; font-size: 9px; padding: 0;
-  }
-  .cv-node-label-remove:hover { color: var(--wax); }
-
   .cv-node-resize {
     position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px; cursor: nwse-resize;
     color: var(--text-faint);
@@ -437,19 +402,6 @@
     stroke-width: 1.8;
     opacity: 0.75;
   }
-  .cv-connector-hit {
-    fill: none;
-    stroke: transparent;
-    stroke-width: 14;
-    pointer-events: stroke;
-    cursor: pointer;
-  }
-  .cv-connector-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9.5px;
-    fill: var(--text-dim);
-  }
-  .cv-connector-label-bg { fill: var(--bg); }
 
   .cv-conn-del {
     position: absolute;
@@ -522,14 +474,6 @@
   }
 
   /* ---------- SIDEBAR SECTIONS (Writings / Map) ---------- */
-  .cv-section-head {
-    padding: 12px 16px 6px 16px; margin-top: 6px; border-top: 1px dashed var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .cv-section-head .eyebrow {
-    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em;
-    text-transform: uppercase; color: var(--text-faint);
-  }
   .cv-section-add {
     background: none; border: 1px solid var(--border-soft); color: var(--text-faint);
     width: 18px; height: 18px; border-radius: 4px; cursor: pointer; font-size: 12px;
@@ -625,11 +569,6 @@
   }
   .cv-map-tool:hover { color: var(--text); border-color: var(--border); }
   .cv-map-tool.active { background: var(--wax-dim); color: #1C1A17; border-color: var(--wax-dim); font-weight: 600; }
-  .cv-map-swatch {
-    width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
-    border: 2px solid transparent; flex-shrink: 0;
-  }
-  .cv-map-swatch.active { border-color: var(--text); }
   #cv-map-custom-color { width: 26px; height: 26px; border: none; background: none; cursor: pointer; padding: 0; }
   #cv-map-size {
     width: 90px; accent-color: var(--wax-dim);
@@ -642,7 +581,6 @@
   #cv-map-wrap.panning { cursor: grabbing; }
   #cv-map-inner {
     position: absolute; top: 0; left: 0;
-    width: 2400px; height: 1600px;
     transform-origin: 0 0;
     background:
       radial-gradient(circle at 30% 20%, rgba(201,97,61,0.04), transparent 60%),
@@ -651,12 +589,8 @@
     background-size: auto, 26px 26px, auto;
     box-shadow: 0 0 0 1px var(--border-soft), 0 20px 60px rgba(0,0,0,0.5);
   }
-  #cv-map-base {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    object-fit: contain; pointer-events: none; user-select: none;
-  }
   #cv-map-paint {
-    position: absolute; top: 0; left: 0; width: 2400px; height: 1600px;
+    position: absolute; top: 0; left: 0;
   }
   #cv-map-labels { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
   .cv-map-label {
@@ -956,6 +890,7 @@
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
       <span class="spacer"></span>
       <button class="cv-map-tool" id="cv-map-addimg">+ Add map images</button>
+      <button class="cv-map-tool" id="cv-map-expand" title="Grow the board to the right and bottom. Everything stays where it is.">&#x2922; Expand board</button>
       <input type="file" id="cv-map-img-input" accept="image/*" multiple style="display:none;">
     </div>
     <div id="cv-map-wrap">
@@ -1170,6 +1105,8 @@
     if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false, images: [] };
     if (!Array.isArray(state.map.labels)) state.map.labels = [];
     if (!Array.isArray(state.map.images)) state.map.images = [];
+    if (typeof state.map.w !== 'number') state.map.w = 2400;
+    if (typeof state.map.h !== 'number') state.map.h = 1600;
     // migrate old combined image labels to separate title/caption
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
@@ -2521,7 +2458,25 @@
   const imgSel = $('cv-map-imgsel');
   const brushCursor = $('cv-brush-cursor');
 
-  const MAP_W = 2400, MAP_H = 1600;
+  const MAP_DEFAULT_W = 2400, MAP_DEFAULT_H = 1600;
+  function boardW() { return (state.map && state.map.w) || MAP_DEFAULT_W; }
+  function boardH() { return (state.map && state.map.h) || MAP_DEFAULT_H; }
+  function applyBoardSize() {
+    mapInner.style.width = boardW() + 'px';
+    mapInner.style.height = boardH() + 'px';
+    if (mapPaint.width !== boardW() || mapPaint.height !== boardH()) {
+      // resizing a canvas clears it; snapshot and redraw to preserve paint
+      let snap = null;
+      try { if (mapPaint.width > 0) snap = mapPaint.toDataURL(); } catch (e) {}
+      mapPaint.width = boardW();
+      mapPaint.height = boardH();
+      if (snap && mapCtx) {
+        const img = new Image();
+        img.onload = () => mapCtx.drawImage(img, 0, 0);
+        img.src = snap;
+      }
+    }
+  }
   let mapCtx = null;
   let mapTool = 'move';
   let mapColor = '#7A8471';
@@ -2548,10 +2503,10 @@
   function clampMapView() {
     const r = mapWrap.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    const minS = Math.min(r.width / MAP_W, r.height / MAP_H);
+    const minS = Math.min(r.width / boardW(), r.height / boardH());
     if (mapVw.scale < minS) mapVw.scale = minS;
     if (mapVw.scale > 3) mapVw.scale = 3;
-    const w = MAP_W * mapVw.scale, h = MAP_H * mapVw.scale;
+    const w = boardW() * mapVw.scale, h = boardH() * mapVw.scale;
     if (w <= r.width + 1) mapVw.x = (r.width - w) / 2;
     else mapVw.x = Math.min(0, Math.max(r.width - w, mapVw.x));
     if (h <= r.height + 1) mapVw.y = (r.height - h) / 2;
@@ -2574,7 +2529,7 @@
   function fitMapToScreen() {
     const rect = mapWrap.getBoundingClientRect();
     if (!rect.width) return;
-    mapVw.scale = Math.min(rect.width / MAP_W, rect.height / MAP_H);
+    mapVw.scale = Math.min(rect.width / boardW(), rect.height / boardH());
     clampMapView();
     applyMapTransform();
   }
@@ -2601,11 +2556,12 @@
     if (!mapCtx) {
       try { mapCtx = mapPaint.getContext('2d'); } catch (e) { mapCtx = null; }
     }
+    applyBoardSize();
     if (!mapLoaded) {
       mapLoaded = true;
       // legacy migration: single base image becomes the first map image
       if (state.map.hasBase && (!state.map.images || !state.map.images.length)) {
-        state.map.images = [{ id: uid('mi'), key: 'map-base', x: 0, y: 0, w: MAP_W, h: MAP_H }];
+        state.map.images = [{ id: uid('mi'), key: 'map-base', x: 0, y: 0, w: boardW(), h: boardH() }];
         state.map.hasBase = false;
         persist();
       }
@@ -2634,7 +2590,7 @@
     undoStack = [];
     hideImgSel();
     mapImagesEl.innerHTML = '';
-    if (mapCtx) mapCtx.clearRect(0, 0, MAP_W, MAP_H);
+    if (mapCtx) mapCtx.clearRect(0, 0, boardW(), boardH());
     if (mapView.classList.contains('open')) openMap();
   }
 
@@ -2720,7 +2676,7 @@
     const prev = undoStack.pop();
     const img = new Image();
     img.onload = () => {
-      mapCtx.clearRect(0, 0, MAP_W, MAP_H);
+      mapCtx.clearRect(0, 0, boardW(), boardH());
       mapCtx.drawImage(img, 0, 0);
       schedulePaintSave();
     };
@@ -2769,19 +2725,25 @@
   function snapMapImage(mi, nx, ny) {
     const thr = 12;
     let bx = nx, by = ny;
+    // board edges snap too
+    const xEdgeList = [0, boardW()];
+    const yEdgeList = [0, boardH()];
     (state.map.images || []).forEach(o => {
       if (o.id === mi.id) return;
-      const xEdges = [o.x, o.x + o.w];
-      const yEdges = [o.y, o.y + o.h];
-      xEdges.forEach(ex => {
-        if (Math.abs(nx - ex) < thr) bx = ex;
-        if (Math.abs(nx + mi.w - ex) < thr) bx = ex - mi.w;
-      });
-      yEdges.forEach(ey => {
-        if (Math.abs(ny - ey) < thr) by = ey;
-        if (Math.abs(ny + mi.h - ey) < thr) by = ey - mi.h;
-      });
+      xEdgeList.push(o.x, o.x + o.w);
+      yEdgeList.push(o.y, o.y + o.h);
     });
+    xEdgeList.forEach(ex => {
+      if (Math.abs(nx - ex) < thr) bx = ex;
+      if (Math.abs(nx + mi.w - ex) < thr) bx = ex - mi.w;
+    });
+    yEdgeList.forEach(ey => {
+      if (Math.abs(ny - ey) < thr) by = ey;
+      if (Math.abs(ny + mi.h - ey) < thr) by = ey - mi.h;
+    });
+    // never outside the board
+    bx = Math.max(0, Math.min(boardW() - mi.w, bx));
+    by = Math.max(0, Math.min(boardH() - mi.h, by));
     return { x: bx, y: by };
   }
 
@@ -2838,8 +2800,8 @@
     } else if (mapImgResize) {
       const dx = (e.clientX - mapImgResize.sx) / mapVw.scale;
       const dy = (e.clientY - mapImgResize.sy) / mapVw.scale;
-      mapImgResize.mi.w = Math.max(60, mapImgResize.ow + dx);
-      mapImgResize.mi.h = Math.max(60, mapImgResize.oh + dy);
+      mapImgResize.mi.w = Math.max(60, Math.min(boardW() - mapImgResize.mi.x, mapImgResize.ow + dx));
+      mapImgResize.mi.h = Math.max(60, Math.min(boardH() - mapImgResize.mi.y, mapImgResize.oh + dy));
       positionMapImage(mapImgResize.mi);
       positionImgSel(mapImgResize.mi);
     } else if (mapPan) {
@@ -3007,6 +2969,7 @@
   function renderMapImages() {
     mapImagesEl.innerHTML = '';
     (state.map.images || []).forEach(mi => {
+      clampImageToBoard(mi);
       const div = document.createElement('div');
       div.className = 'cv-map-img';
       div.dataset.id = mi.id;
@@ -3107,12 +3070,14 @@
             pw = Math.round(pw * s); ph = Math.round(ph * s);
           }
           if (!Array.isArray(state.map.images)) state.map.images = [];
-          state.map.images.push({
+          const mi = {
             id: uid('mi'), key,
             x: center.x - pw / 2 + idx * 40,
             y: center.y - ph / 2 + idx * 40,
             w: pw, h: ph,
-          });
+          };
+          clampImageToBoard(mi);
+          state.map.images.push(mi);
           persist();
           renderMapImages();
           flashSaved();
@@ -3124,6 +3089,30 @@
   }
 
   $('cv-map-addimg').onclick = () => $('cv-map-img-input').click();
+
+  $('cv-map-expand').onclick = () => {
+    showConfirm({
+      title: 'Expand the board?',
+      msg: 'Adds 800px of space to the right and 500px to the bottom. Your pictures, paint, and labels stay exactly where they are.',
+      okLabel: 'Expand',
+      onConfirm: () => {
+        state.map.w = boardW() + 800;
+        state.map.h = boardH() + 500;
+        applyBoardSize();
+        clampMapView();
+        applyMapTransform();
+        persist();
+        flashSaved();
+      },
+    });
+  };
+
+  function clampImageToBoard(mi) {
+    mi.w = Math.min(mi.w, boardW());
+    mi.h = Math.min(mi.h, boardH());
+    mi.x = Math.max(0, Math.min(boardW() - mi.w, mi.x));
+    mi.y = Math.max(0, Math.min(boardH() - mi.h, mi.y));
+  }
   $('cv-map-img-input').onchange = () => {
     const files = $('cv-map-img-input').files;
     if (files && files.length) addMapImages(files);
