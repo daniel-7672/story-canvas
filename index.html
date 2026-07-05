@@ -788,6 +788,7 @@
     transition: transform 0.12s ease;
   }
   .cv-tl-event:hover .cv-tl-dot, .cv-tl-event.active .cv-tl-dot { transform: scale(1.25); }
+  .cv-tl-event.locked .cv-tl-dot { box-shadow: 0 0 0 2px var(--text-faint); background: var(--text-faint); }
   .cv-tl-label {
     margin-top: 8px;
     font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px;
@@ -815,23 +816,35 @@
   #cv-timeline-detail {
     display: none;
     position: fixed; z-index: 70;
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 420px; max-width: calc(100vw - 40px); max-height: calc(100vh - 80px);
+    width: 380px; max-width: calc(100vw - 40px); max-height: calc(100vh - 80px);
     overflow-y: auto;
-    background: var(--surface-hi); border: 1px solid var(--border); border-radius: 8px;
-    padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 10px;
+    padding: 14px; box-shadow: 0 16px 44px rgba(0,0,0,0.5);
   }
   #cv-timeline-detail.show { display: block; }
-  #cv-timeline-detail-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  #cv-timeline-detail-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
   #cv-timeline-detail-date {
     flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11px;
-    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 4px;
+    background: var(--surface-hi); border: 1px solid var(--border-soft); border-radius: 4px;
     padding: 7px 9px; color: var(--wax);
   }
-  #cv-timeline-detail-close {
-    background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; padding: 4px;
+  #cv-timeline-detail-lock, #cv-timeline-detail-close {
+    background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; padding: 4px 6px;
   }
-  #cv-timeline-detail-close:hover { color: var(--wax); }
+  #cv-timeline-detail-lock:hover, #cv-timeline-detail-close:hover { color: var(--wax); }
+  #cv-timeline-detail-lock.active { color: var(--wax); }
+  #cv-timeline-size-row {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+  }
+  #cv-timeline-size-row span {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint); margin-right: 2px;
+  }
+  #cv-timeline-size-row button {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    background: var(--surface-hi); color: var(--text-dim); border: 1px solid var(--border-soft);
+    border-radius: 4px; padding: 4px 8px; cursor: pointer;
+  }
+  #cv-timeline-size-row button:hover { color: var(--text); border-color: var(--border); }
   #cv-timeline-detail-title {
     width: 100%; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px;
     background: transparent; border: none; border-bottom: 1px solid var(--border-soft);
@@ -840,7 +853,7 @@
   #cv-timeline-detail-title::placeholder { color: var(--text-faint); }
   #cv-timeline-detail-desc {
     width: 100%; min-height: 120px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.6;
-    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 5px;
+    background: var(--surface-hi); border: 1px solid var(--border-soft); border-radius: 5px;
     color: var(--text-dim); padding: 10px; resize: vertical; margin-bottom: 10px;
   }
   #cv-timeline-detail-desc::placeholder { color: var(--text-faint); font-style: italic; }
@@ -851,12 +864,28 @@
   #cv-timeline-detail-actions { display: flex; gap: 8px; align-items: center; }
   #cv-timeline-detail-actions button {
     font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
-    background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-soft);
+    background: var(--surface-hi); color: var(--text-dim); border: 1px solid var(--border-soft);
     padding: 7px 11px; border-radius: 5px; cursor: pointer;
   }
   #cv-timeline-detail-actions button:hover { color: var(--text); border-color: var(--border); }
   #cv-timeline-detail-delete { margin-left: auto; }
   #cv-timeline-detail-delete:hover { color: var(--wax); border-color: var(--wax-dim); }
+
+  /* ---------- LIGHTBOX ---------- */
+  #cv-lightbox {
+    display: none;
+    position: fixed; inset: 0; z-index: 90;
+    background: rgba(10,9,7,0.9);
+    align-items: center; justify-content: center;
+  }
+  #cv-lightbox.show { display: flex; }
+  #cv-lightbox-img { max-width: 90vw; max-height: 90vh; object-fit: contain; border-radius: 4px; }
+  #cv-lightbox-close {
+    position: absolute; top: 18px; right: 22px;
+    background: var(--surface-hi); border: 1px solid var(--border); color: var(--text-dim);
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 14px;
+  }
+  #cv-lightbox-close:hover { color: var(--wax); border-color: var(--wax-dim); }
 
   #cv-confirm-overlay {
     position: fixed;
@@ -1092,7 +1121,13 @@
     <div id="cv-timeline-detail">
       <div id="cv-timeline-detail-head">
         <input id="cv-timeline-detail-date" placeholder="Date or era (e.g. Year 3, early spring)">
+        <button id="cv-timeline-detail-lock" title="Lock so this date can't be dragged by accident">&#128275;</button>
         <button id="cv-timeline-detail-close" title="Close">&#x2715;</button>
+      </div>
+      <div id="cv-timeline-size-row">
+        <span>Marker size</span>
+        <button id="cv-tl-smaller" title="Smaller">A-</button>
+        <button id="cv-tl-bigger" title="Bigger">A+</button>
       </div>
       <input id="cv-timeline-detail-title" placeholder="Title">
       <textarea id="cv-timeline-detail-desc" placeholder="What happens here? Add as much detail as you like..."></textarea>
@@ -1103,6 +1138,11 @@
         <button id="cv-timeline-detail-delete">Delete this date</button>
       </div>
     </div>
+  </div>
+
+  <div id="cv-lightbox">
+    <button id="cv-lightbox-close" title="Close">&#x2715;</button>
+    <img id="cv-lightbox-img" alt="">
   </div>
 
   <div id="cv-confirm-overlay">
@@ -2812,7 +2852,8 @@
       const rect = mapWrap.getBoundingClientRect();
       const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
       const prev = mapVw.scale;
-      let ns = prev * (1 - e.deltaY * 0.0015);
+      const minS = Math.min(rect.width / boardW(), rect.height / boardH()) * MAP_FIT_MARGIN;
+      let ns = Math.max(minS, Math.min(3, prev * (1 - e.deltaY * 0.0015)));
       mapVw.x = cx - ((cx - mapVw.x) / prev) * ns;
       mapVw.y = cy - ((cy - mapVw.y) / prev) * ns;
       mapVw.scale = ns;
@@ -2829,7 +2870,8 @@
     const rect = mapWrap.getBoundingClientRect();
     const cx = rect.width / 2, cy = rect.height / 2;
     const prev = mapVw.scale;
-    let ns = prev * f;
+    const minS = Math.min(rect.width / boardW(), rect.height / boardH()) * MAP_FIT_MARGIN;
+    let ns = Math.max(minS, Math.min(3, prev * f));
     mapVw.x = cx - ((cx - mapVw.x) / prev) * ns;
     mapVw.y = cy - ((cy - mapVw.y) / prev) * ns;
     mapVw.scale = ns;
@@ -3541,10 +3583,13 @@
     if (tlVw.scale < minS) tlVw.scale = minS;
     if (tlVw.scale > 3) tlVw.scale = 3;
     const w = TL_W * tlVw.scale, h = TL_H * tlVw.scale;
-    if (w <= r.width) tlVw.x = (r.width - w) / 2; // locked, centered while it fits
-    else tlVw.x = Math.min(0, Math.max(r.width - w, tlVw.x));
-    if (h <= r.height) tlVw.y = (r.height - h) / 2; // locked, centered while it fits
-    else tlVw.y = Math.min(0, Math.max(r.height - h, tlVw.y));
+    // X is where the dates actually live: a pure bounds clamp that never re-centers,
+    // so ctrl+scroll zoom-to-cursor stays exact along the line.
+    const minX = Math.min(0, r.width - w), maxX = Math.max(0, r.width - w);
+    tlVw.x = Math.min(maxX, Math.max(minX, tlVw.x));
+    // Y is just vertical framing for the line -- nothing meaningful to zoom toward,
+    // so it always stays centered.
+    tlVw.y = (r.height - h) / 2;
   }
   function tlApplyTransform() {
     timelineInner.style.transform = `translate(${tlVw.x}px, ${tlVw.y}px) scale(${tlVw.scale})`;
@@ -3597,11 +3642,13 @@
 
   timelineWrap.addEventListener('wheel', (e) => {
     e.preventDefault();
+    if (timelineDetail.classList.contains('show')) closeTimelineDetail();
     if (e.ctrlKey || e.metaKey) {
       const rect = timelineWrap.getBoundingClientRect();
       const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
       const prev = tlVw.scale;
-      let ns = prev * (1 - e.deltaY * 0.0015);
+      const minS = Math.min(rect.width / TL_W, rect.height / TL_H) * MAP_FIT_MARGIN;
+      let ns = Math.max(minS, Math.min(3, prev * (1 - e.deltaY * 0.0015)));
       tlVw.x = cx - ((cx - tlVw.x) / prev) * ns;
       tlVw.y = cy - ((cy - tlVw.y) / prev) * ns;
       tlVw.scale = ns;
@@ -3617,7 +3664,8 @@
     const rect = timelineWrap.getBoundingClientRect();
     const cx = rect.width / 2, cy = rect.height / 2;
     const prev = tlVw.scale;
-    let ns = prev * f;
+    const minS = Math.min(rect.width / TL_W, rect.height / TL_H) * MAP_FIT_MARGIN;
+    let ns = Math.max(minS, Math.min(3, prev * f));
     tlVw.x = cx - ((cx - tlVw.x) / prev) * ns;
     tlVw.y = cy - ((cy - tlVw.y) / prev) * ns;
     tlVw.scale = ns;
@@ -3635,8 +3683,9 @@
   });
   window.addEventListener('pointermove', (e) => {
     if (tlPan) {
-      tlVw.x = tlPan.ox + (e.clientX - tlPan.sx);
-      tlVw.y = tlPan.oy + (e.clientY - tlPan.sy);
+      const r = timelineWrap.getBoundingClientRect();
+      const w = TL_W * tlVw.scale;
+      if (w > r.width) tlVw.x = tlPan.ox + (e.clientX - tlPan.sx);
       tlClampView();
       tlApplyTransform();
     }
@@ -3658,15 +3707,20 @@
       .sort((a, b) => a.x - b.x)
       .forEach(ev => {
         clampTlEvent(ev);
+        if (typeof ev.size !== 'number') ev.size = 16;
         const el = document.createElement('div');
-        el.className = 'cv-tl-event' + (ev.id === activeTlEventId ? ' active' : '');
+        el.className = 'cv-tl-event' + (ev.id === activeTlEventId ? ' active' : '') + (ev.locked ? ' locked' : '');
         el.dataset.id = ev.id;
         el.style.left = ev.x + 'px';
 
+        const dotSize = Math.max(8, Math.min(36, 8 + ev.size * 0.85));
         const dot = document.createElement('div');
         dot.className = 'cv-tl-dot';
+        dot.style.width = dotSize + 'px';
+        dot.style.height = dotSize + 'px';
         const label = document.createElement('div');
         label.className = 'cv-tl-label';
+        label.style.fontSize = ev.size + 'px';
         label.textContent = ev.title && ev.title.trim() ? ev.title.trim() : '(untitled)';
         const dateEl = document.createElement('div');
         dateEl.className = 'cv-tl-date';
@@ -3678,6 +3732,7 @@
 
         el.onpointerdown = (e) => {
           e.stopPropagation();
+          if (ev.locked) { openTimelineDetail(ev.id); return; }
           tlEventDrag = { ev, sx: e.clientX, ox: ev.x, moved: false };
           el.classList.add('dragging');
         };
@@ -3713,24 +3768,49 @@
   $('cv-timeline-add').onclick = () => {
     const rect = timelineWrap.getBoundingClientRect();
     const center = tlScreenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
-    const ev = { id: uid('tl'), x: center.x, date: '', title: '', description: '', images: [] };
+    const ev = { id: uid('tl'), x: center.x, date: '', title: '', description: '', images: [], size: 16, locked: false };
     currentTlEvents().push(ev);
     persist();
     renderTimelineEvents();
     openTimelineDetail(ev.id);
   };
 
+  function positionTimelineDetail(ev) {
+    const markerEl = timelineEventsEl.querySelector(`[data-id="${ev.id}"]`);
+    const wrapRect = timelineWrap.getBoundingClientRect();
+    if (!markerEl) {
+      timelineDetail.style.left = (wrapRect.left + wrapRect.width / 2 - timelineDetail.offsetWidth / 2) + 'px';
+      timelineDetail.style.top = (wrapRect.top + 40) + 'px';
+      return;
+    }
+    const mRect = markerEl.getBoundingClientRect();
+    const panelH = timelineDetail.offsetHeight || 360;
+    const panelW = timelineDetail.offsetWidth || 380;
+    const spaceBelow = wrapRect.bottom - mRect.bottom;
+    const spaceAbove = mRect.top - wrapRect.top;
+    const showBelow = spaceBelow >= panelH + 20 || spaceBelow >= spaceAbove;
+    let top = showBelow ? mRect.bottom + 14 : mRect.top - panelH - 14;
+    top = Math.max(wrapRect.top + 8, Math.min(wrapRect.bottom - panelH - 8, top));
+    let left = mRect.left + mRect.width / 2 - panelW / 2;
+    left = Math.max(wrapRect.left + 8, Math.min(wrapRect.right - panelW - 8, left));
+    timelineDetail.style.top = top + 'px';
+    timelineDetail.style.left = left + 'px';
+  }
+
   function openTimelineDetail(id) {
     const ev = currentTlEvents().find(e => e.id === id);
     if (!ev) return;
     if (!Array.isArray(ev.images)) ev.images = [];
+    if (typeof ev.size !== 'number') ev.size = 16;
     activeTlEventId = id;
     $('cv-timeline-detail-date').value = ev.date || '';
     $('cv-timeline-detail-title').value = ev.title || '';
     $('cv-timeline-detail-desc').value = ev.description || '';
+    updateLockButton(ev);
     renderTimelineDetailGallery(ev);
     timelineDetail.classList.add('show');
     renderTimelineEvents();
+    requestAnimationFrame(() => positionTimelineDetail(ev));
   }
   function closeTimelineDetail() {
     activeTlEventId = null;
@@ -3740,9 +3820,34 @@
   function activeTlEvent() {
     return currentTlEvents().find(e => e.id === activeTlEventId);
   }
+  function updateLockButton(ev) {
+    const btn = $('cv-timeline-detail-lock');
+    btn.classList.toggle('active', !!ev.locked);
+    btn.title = ev.locked ? 'Unlock this date' : "Lock so this date can't be dragged by accident";
+  }
 
   $('cv-timeline-detail-close').onclick = closeTimelineDetail;
   timelineDetail.onpointerdown = (e) => e.stopPropagation();
+
+  $('cv-timeline-detail-lock').onclick = () => {
+    const ev = activeTlEvent(); if (!ev) return;
+    ev.locked = !ev.locked;
+    updateLockButton(ev);
+    persist();
+    renderTimelineEvents();
+  };
+  $('cv-tl-bigger').onclick = () => {
+    const ev = activeTlEvent(); if (!ev) return;
+    ev.size = Math.min(48, ev.size + 4);
+    persist();
+    renderTimelineEvents();
+  };
+  $('cv-tl-smaller').onclick = () => {
+    const ev = activeTlEvent(); if (!ev) return;
+    ev.size = Math.max(10, ev.size - 4);
+    persist();
+    renderTimelineEvents();
+  };
 
   document.addEventListener('pointerdown', (e) => {
     if (!timelineDetail.classList.contains('show')) return;
@@ -3779,6 +3884,17 @@
     });
   };
 
+  function openLightbox(src) {
+    if (!src) return;
+    $('cv-lightbox-img').src = src;
+    $('cv-lightbox').classList.add('show');
+  }
+  function closeLightbox() {
+    $('cv-lightbox').classList.remove('show');
+  }
+  $('cv-lightbox-close').onclick = closeLightbox;
+  $('cv-lightbox').onclick = (e) => { if (e.target.id === 'cv-lightbox') closeLightbox(); };
+
   function renderTimelineDetailGallery(ev) {
     const gal = $('cv-timeline-detail-gallery');
     gal.innerHTML = '';
@@ -3786,13 +3902,16 @@
       const wrap = document.createElement('div');
       wrap.className = 'cv-wimg';
       const img = document.createElement('img');
+      img.style.cursor = 'zoom-in';
       const src = imageCache[key];
       if (src) img.src = src;
       else idbGet('images', key).then(v => { if (v) { imageCache[key] = v; img.src = v; } }).catch(() => {});
+      img.onclick = () => openLightbox(img.src);
       const del = document.createElement('button');
       del.textContent = '\u2715';
       del.title = 'Remove image';
-      del.onclick = () => {
+      del.onclick = (e) => {
+        e.stopPropagation();
         ev.images = ev.images.filter(k => k !== key);
         delete imageCache[key];
         idbDelete('images', key).catch(() => {});
@@ -3872,7 +3991,8 @@
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (confirmOverlay.classList.contains('show')) return; // handled elsewhere
-    if (writingView.classList.contains('open')) closeWriting();
+    if ($('cv-lightbox').classList.contains('show')) closeLightbox();
+    else if (writingView.classList.contains('open')) closeWriting();
     else if (timelineDetail.classList.contains('show')) closeTimelineDetail();
     else if (timelineView.classList.contains('open')) closeTimeline();
     else if (mapView.classList.contains('open')) { hideLabelToolbar(); closeMap(); }
