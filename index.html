@@ -499,15 +499,6 @@
   .cv-writing-item:hover .cv-writing-del { opacity: 1; }
   .cv-writing-del:hover { color: var(--wax); }
 
-  #cv-open-map-btn {
-    margin: 6px 8px 0 8px;
-    font-family: 'Fraunces', serif; font-size: 13.5px; font-weight: 500;
-    color: var(--text-dim); background: transparent; border: 1px solid var(--border-soft);
-    text-align: left; padding: 9px 12px; border-radius: 4px; cursor: pointer;
-    display: flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s;
-  }
-  #cv-open-map-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
-
   /* ---------- WRITING VIEW ---------- */
   #cv-writing-view {
     position: fixed; inset: 0; background: var(--bg); z-index: 60;
@@ -614,9 +605,7 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 6px; border-radius: 3px;
   }
   #cv-label-toolbar button:hover { background: var(--surface); color: var(--text); }
-  #cv-label-toolbar .lbl-color {
-    width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid var(--border);
-  }
+  #cv-lbl-color-wheel { width: 22px; height: 22px; border: none; background: none; cursor: pointer; padding: 0; }
   #cv-map-zoom {
     position: absolute; bottom: 14px; left: 14px; z-index: 10;
     display: flex; align-items: center; gap: 4px;
@@ -649,15 +638,16 @@
   .cv-acc.open .cv-acc-body { display: block; }
 
   #cv-sidebar-bottom { margin-top: auto; border-top: 1px dashed var(--border); padding-top: 8px; }
-  #cv-open-map-btn {
+  .cv-bottom-nav-btn {
     display: flex; width: calc(100% - 16px);
-    margin: 0 8px;
+    margin: 6px 8px 0 8px;
     font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600;
     color: var(--text); background: var(--surface); border: 1px solid var(--border-soft);
     text-align: left; padding: 11px 12px; border-radius: 5px; cursor: pointer;
     align-items: center; gap: 8px; transition: background 0.15s, border-color 0.15s;
   }
-  #cv-open-map-btn:hover { background: var(--surface-hi); border-color: var(--border); }
+  .cv-bottom-nav-btn:first-child { margin-top: 0; }
+  .cv-bottom-nav-btn:hover { background: var(--surface-hi); border-color: var(--border); }
 
   /* ---------- BRUSH CURSOR ---------- */
   #cv-brush-cursor {
@@ -668,6 +658,7 @@
   #cv-brush-cursor.paint { border: 1.5px solid var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
   #cv-brush-cursor.erase { border: 1.5px dashed var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
   #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: none; }
+  #cv-map-wrap.tool-fill { cursor: cell; }
 
   /* ---------- MAP IMAGES ---------- */
   #cv-map-images { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
@@ -751,6 +742,120 @@
   #cv-canvas-wrap.disconnect-mode .cv-conn-del {
     display: flex; width: 22px; height: 22px; font-size: 11px; opacity: 0.9;
   }
+
+  /* ---------- TIMELINE VIEW ---------- */
+  #cv-timeline-view {
+    position: fixed; inset: 0; background: var(--bg); z-index: 60;
+    display: none; flex-direction: column;
+  }
+  #cv-timeline-view.open { display: flex; }
+  #cv-timeline-topbar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border-soft); flex-shrink: 0;
+  }
+  #cv-timeline-topbar .spacer { flex: 1; }
+  #cv-timeline-wrap {
+    flex: 1; position: relative; overflow: hidden; cursor: grab;
+  }
+  #cv-timeline-wrap.panning { cursor: grabbing; }
+  #cv-timeline-inner {
+    position: absolute; top: 0; left: 0;
+    transform-origin: 0 0;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(154,168,143,0.05), transparent 60%),
+      radial-gradient(circle at 1px 1px, var(--bg-dot) 1.2px, transparent 0),
+      #211E1A;
+    background-size: auto, 26px 26px, auto;
+    box-shadow: 0 0 0 1px var(--border-soft), 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #cv-timeline-line {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 3px; background: var(--wax-dim); opacity: 0.55;
+    transform: translateY(-50%);
+  }
+  #cv-timeline-events { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .cv-tl-event {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center;
+    cursor: grab; user-select: none;
+  }
+  .cv-tl-event.dragging { cursor: grabbing; z-index: 10; }
+  .cv-tl-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--wax-dim); border: 2px solid var(--bg);
+    box-shadow: 0 0 0 2px var(--wax-dim);
+    transition: transform 0.12s ease;
+  }
+  .cv-tl-event:hover .cv-tl-dot, .cv-tl-event.active .cv-tl-dot { transform: scale(1.25); }
+  .cv-tl-label {
+    margin-top: 8px;
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px;
+    color: var(--text); text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+    text-align: center;
+  }
+  .cv-tl-date {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint);
+    margin-top: 2px; white-space: nowrap;
+  }
+  #cv-timeline-zoom {
+    position: absolute; bottom: 14px; left: 14px; z-index: 10;
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 6px;
+    padding: 4px;
+  }
+  #cv-timeline-hint {
+    position: absolute; bottom: 14px; right: 14px; z-index: 10;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint);
+    background: var(--surface); border: 1px solid var(--border-soft); padding: 7px 11px; border-radius: 6px;
+    max-width: 280px; line-height: 1.6;
+  }
+
+  #cv-timeline-detail {
+    display: none;
+    position: fixed; z-index: 70;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 420px; max-width: calc(100vw - 40px); max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    background: var(--surface-hi); border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  #cv-timeline-detail.show { display: block; }
+  #cv-timeline-detail-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  #cv-timeline-detail-date {
+    flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 4px;
+    padding: 7px 9px; color: var(--wax);
+  }
+  #cv-timeline-detail-close {
+    background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; padding: 4px;
+  }
+  #cv-timeline-detail-close:hover { color: var(--wax); }
+  #cv-timeline-detail-title {
+    width: 100%; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px;
+    background: transparent; border: none; border-bottom: 1px solid var(--border-soft);
+    color: var(--text); padding: 6px 2px; margin-bottom: 10px;
+  }
+  #cv-timeline-detail-title::placeholder { color: var(--text-faint); }
+  #cv-timeline-detail-desc {
+    width: 100%; min-height: 120px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.6;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 5px;
+    color: var(--text-dim); padding: 10px; resize: vertical; margin-bottom: 10px;
+  }
+  #cv-timeline-detail-desc::placeholder { color: var(--text-faint); font-style: italic; }
+  #cv-timeline-detail-gallery {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  #cv-timeline-detail-gallery:empty { display: none; }
+  #cv-timeline-detail-actions { display: flex; gap: 8px; align-items: center; }
+  #cv-timeline-detail-actions button {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-soft);
+    padding: 7px 11px; border-radius: 5px; cursor: pointer;
+  }
+  #cv-timeline-detail-actions button:hover { color: var(--text); border-color: var(--border); }
+  #cv-timeline-detail-delete { margin-left: auto; }
+  #cv-timeline-detail-delete:hover { color: var(--wax); border-color: var(--wax-dim); }
 
   #cv-confirm-overlay {
     position: fixed;
@@ -851,7 +956,8 @@
     </div>
 
     <div id="cv-sidebar-bottom">
-      <button id="cv-open-map-btn">&#128506; World Map</button>
+      <button id="cv-open-timeline-btn" class="cv-bottom-nav-btn">&#9202; Timeline</button>
+      <button id="cv-open-map-btn" class="cv-bottom-nav-btn">&#128506; World Map</button>
       <div id="cv-backup-row">
         <button id="cv-export-btn">&#8659; Download backup</button>
         <button id="cv-import-btn" title="Restore from a backup file">Import</button>
@@ -913,11 +1019,14 @@
       <button class="cv-back-btn" id="cv-map-back">&larr; Back</button>
       <button class="cv-map-tool active" data-tool="move" title="Pan the map / drag images and labels">&#10021; Move</button>
       <button class="cv-map-tool" data-tool="paint" title="Paint on the map">&#128396; Paint</button>
+      <button class="cv-map-tool" data-tool="fill" title="Fill an enclosed area with the current color">&#129529; Fill</button>
       <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
       <input type="color" id="cv-map-custom-color" value="#7A8471" title="Brush color">
       <input type="range" id="cv-map-size" min="2" max="80" value="10" title="Brush size">
+      <input type="range" id="cv-map-texture" min="0" max="100" value="0" title="Texture: smooth to rough">
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
+      <button class="cv-map-tool" id="cv-map-redo" title="Redo">&#8631; Redo</button>
       <span class="spacer"></span>
       <button class="cv-map-tool" id="cv-map-addimg">+ Add map images</button>
       <div class="cv-resize-wrap">
@@ -946,10 +1055,7 @@
       <div id="cv-label-toolbar">
         <button id="cv-lbl-smaller" title="Smaller">A-</button>
         <button id="cv-lbl-bigger" title="Bigger">A+</button>
-        <span class="lbl-color" data-c="#E8E2D4" style="background:#E8E2D4;"></span>
-        <span class="lbl-color" data-c="#2B2620" style="background:#2B2620;"></span>
-        <span class="lbl-color" data-c="#D4744E" style="background:#D4744E;"></span>
-        <span class="lbl-color" data-c="#9AA88F" style="background:#9AA88F;"></span>
+        <input type="color" id="cv-lbl-color-wheel" value="#E8E2D4" title="Label color">
         <button id="cv-lbl-delete" title="Delete label">&#x2715;</button>
       </div>
       <div id="cv-map-zoom">
@@ -959,6 +1065,42 @@
         <button class="cv-zoom-btn" id="cv-map-zoom-fit" title="Fit map to screen">&#8982;</button>
       </div>
       <div id="cv-map-hint">Move: drag to pan, drag images &amp; labels (images snap together) &middot; Paint/Erase: draw &middot; Label: click to name a place</div>
+    </div>
+  </div>
+
+  <div id="cv-timeline-view">
+    <div id="cv-timeline-topbar">
+      <button class="cv-back-btn" id="cv-timeline-back">&larr; Back</button>
+      <button class="cv-map-tool primary" id="cv-timeline-add">+ Add date</button>
+      <span class="spacer"></span>
+    </div>
+    <div id="cv-timeline-wrap">
+      <div id="cv-timeline-inner">
+        <div id="cv-timeline-line"></div>
+        <div id="cv-timeline-events"></div>
+      </div>
+      <div id="cv-timeline-zoom">
+        <button class="cv-zoom-btn" id="cv-timeline-zoom-out">&minus;</button>
+        <span id="cv-timeline-zoom-pct">100%</span>
+        <button class="cv-zoom-btn" id="cv-timeline-zoom-in">+</button>
+        <button class="cv-zoom-btn" id="cv-timeline-zoom-fit" title="Fit timeline to screen">&#8982;</button>
+      </div>
+      <div id="cv-timeline-hint">Drag a marker to move it along time &middot; Click a marker to open it &middot; "+ Add date" creates a new one</div>
+    </div>
+
+    <div id="cv-timeline-detail">
+      <div id="cv-timeline-detail-head">
+        <input id="cv-timeline-detail-date" placeholder="Date or era (e.g. Year 3, early spring)">
+        <button id="cv-timeline-detail-close" title="Close">&#x2715;</button>
+      </div>
+      <input id="cv-timeline-detail-title" placeholder="Title">
+      <textarea id="cv-timeline-detail-desc" placeholder="What happens here? Add as much detail as you like..."></textarea>
+      <div id="cv-timeline-detail-gallery"></div>
+      <div id="cv-timeline-detail-actions">
+        <button id="cv-timeline-detail-addimg">+ Image</button>
+        <input type="file" id="cv-timeline-img-input" accept="image/*" multiple style="display:none;">
+        <button id="cv-timeline-detail-delete">Delete this date</button>
+      </div>
     </div>
   </div>
 
@@ -1146,6 +1288,8 @@
     if (!Array.isArray(state.map.images)) state.map.images = [];
     if (typeof state.map.w !== 'number') state.map.w = 3600;
     if (typeof state.map.h !== 'number') state.map.h = 1300;
+    if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
+    if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
     // migrate old combined image labels to separate title/caption
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
@@ -1396,6 +1540,7 @@
     });
     (state.map.images || []).forEach(mi => keys.add(mi.key));
     (state.writings || []).forEach(w => (w.images || []).forEach(k => keys.add(k)));
+    (state.timeline.events || []).forEach(ev => (ev.images || []).forEach(k => keys.add(k)));
     keys.add('map-paint');
     keys.add('map-base'); // legacy, harmless if absent
     for (const key of keys) {
@@ -1441,6 +1586,9 @@
           if (!Array.isArray(state.writings)) state.writings = [];
           if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
           if (!Array.isArray(state.map.labels)) state.map.labels = [];
+          if (!Array.isArray(state.map.images)) state.map.images = [];
+          if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
+          if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
           const images = payload.images || {};
           const writes = Object.entries(images).map(([k, v]) => {
             imageCache[k] = v;
@@ -1452,6 +1600,7 @@
           renderBoardList();
           renderWritingList();
           resetMapForReload();
+          resetTimelineForReload();
           renderAll();
           persist();
         },
@@ -2522,11 +2671,13 @@
   let mapTool = 'move';
   let mapColor = '#7A8471';
   let mapBrush = 10;
+  let mapTexture = 0;
   let mapVw = { x: 0, y: 0, scale: 0.4 };
   let mapPan = null;
   let painting = false;
   let lastPt = null;
   let undoStack = [];
+  let redoStack = [];
   let paintSaveTimeout = null;
   let mapLoaded = false;
   let activeLabelId = null;
@@ -2540,6 +2691,7 @@
     mapBrush = parseInt(e.target.value, 10);
     updateBrushCursor();
   };
+  $('cv-map-texture').oninput = (e) => { mapTexture = parseInt(e.target.value, 10); };
 
   const MAP_FIT_MARGIN = 0.93; // keeps a visible gap around the board at min zoom / on fit
 
@@ -2550,10 +2702,10 @@
     if (mapVw.scale < minS) mapVw.scale = minS;
     if (mapVw.scale > 3) mapVw.scale = 3;
     const w = boardW() * mapVw.scale, h = boardH() * mapVw.scale;
-    if (w <= r.width + 1) mapVw.x = (r.width - w) / 2;
-    else mapVw.x = Math.min(0, Math.max(r.width - w, mapVw.x));
-    if (h <= r.height + 1) mapVw.y = (r.height - h) / 2;
-    else mapVw.y = Math.min(0, Math.max(r.height - h, mapVw.y));
+    const minX = Math.min(0, r.width - w), maxX = Math.max(0, r.width - w);
+    mapVw.x = Math.min(maxX, Math.max(minX, mapVw.x));
+    const minY = Math.min(0, r.height - h), maxY = Math.max(0, r.height - h);
+    mapVw.y = Math.min(maxY, Math.max(minY, mapVw.y));
   }
 
   function applyMapTransform() {
@@ -2573,6 +2725,9 @@
     const rect = mapWrap.getBoundingClientRect();
     if (!rect.width) return;
     mapVw.scale = Math.min(rect.width / boardW(), rect.height / boardH()) * MAP_FIT_MARGIN;
+    const w = boardW() * mapVw.scale, h = boardH() * mapVw.scale;
+    mapVw.x = (rect.width - w) / 2;
+    mapVw.y = (rect.height - h) / 2;
     clampMapView();
     applyMapTransform();
   }
@@ -2711,19 +2866,38 @@
     try {
       undoStack.push(mapPaint.toDataURL());
       if (undoStack.length > 15) undoStack.shift();
+      redoStack = []; // a new action invalidates the redo history
     } catch (e) {}
   }
 
   $('cv-map-undo').onclick = () => {
     if (!mapCtx || !undoStack.length) return;
+    let current = null;
+    try { current = mapPaint.toDataURL(); } catch (e) {}
     const prev = undoStack.pop();
     const img = new Image();
     img.onload = () => {
+      if (current) redoStack.push(current);
       mapCtx.clearRect(0, 0, boardW(), boardH());
       mapCtx.drawImage(img, 0, 0);
       schedulePaintSave();
     };
     img.src = prev;
+  };
+
+  $('cv-map-redo').onclick = () => {
+    if (!mapCtx || !redoStack.length) return;
+    let current = null;
+    try { current = mapPaint.toDataURL(); } catch (e) {}
+    const next = redoStack.pop();
+    const img = new Image();
+    img.onload = () => {
+      if (current) undoStack.push(current);
+      mapCtx.clearRect(0, 0, boardW(), boardH());
+      mapCtx.drawImage(img, 0, 0);
+      schedulePaintSave();
+    };
+    img.src = next;
   };
 
   function schedulePaintSave() {
@@ -2737,23 +2911,99 @@
     }, 800);
   }
 
+  function hexToRgb(hex) {
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '#7A8471');
+    return m ? { r: parseInt(m[1], 16), g: parseInt(m[2], 16), b: parseInt(m[3], 16) } : { r: 122, g: 132, b: 113 };
+  }
+
   function strokeTo(pt) {
     if (!mapCtx || !lastPt) return;
-    mapCtx.lineCap = 'round';
-    mapCtx.lineJoin = 'round';
-    mapCtx.lineWidth = mapBrush;
     if (mapTool === 'erase') {
       mapCtx.globalCompositeOperation = 'destination-out';
+      mapCtx.lineCap = 'round';
+      mapCtx.lineJoin = 'round';
+      mapCtx.lineWidth = mapBrush;
       mapCtx.strokeStyle = 'rgba(0,0,0,1)';
-    } else {
-      mapCtx.globalCompositeOperation = 'source-over';
-      mapCtx.strokeStyle = mapColor;
+      mapCtx.beginPath();
+      mapCtx.moveTo(lastPt.x, lastPt.y);
+      mapCtx.lineTo(pt.x, pt.y);
+      mapCtx.stroke();
+      lastPt = pt;
+      return;
     }
-    mapCtx.beginPath();
-    mapCtx.moveTo(lastPt.x, lastPt.y);
-    mapCtx.lineTo(pt.x, pt.y);
-    mapCtx.stroke();
+    mapCtx.globalCompositeOperation = 'source-over';
+    if (mapTexture > 0) {
+      // rough/textured brush: scattered semi-transparent dabs instead of one flat line
+      const dx = pt.x - lastPt.x, dy = pt.y - lastPt.y;
+      const dist = Math.hypot(dx, dy);
+      const step = Math.max(1, mapBrush * 0.22);
+      const steps = Math.max(1, Math.round(dist / step));
+      const rgb = hexToRgb(mapColor);
+      const jitter = (mapTexture / 100) * mapBrush * 0.55;
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const px = lastPt.x + dx * t, py = lastPt.y + dy * t;
+        const ox = (Math.random() - 0.5) * jitter;
+        const oy = (Math.random() - 0.5) * jitter;
+        const rad = (mapBrush / 2) * (0.65 + Math.random() * 0.55);
+        const alpha = 0.4 + Math.random() * 0.35;
+        mapCtx.beginPath();
+        mapCtx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha.toFixed(2)})`;
+        mapCtx.arc(px + ox, py + oy, rad, 0, Math.PI * 2);
+        mapCtx.fill();
+      }
+    } else {
+      mapCtx.lineCap = 'round';
+      mapCtx.lineJoin = 'round';
+      mapCtx.lineWidth = mapBrush;
+      mapCtx.strokeStyle = mapColor;
+      mapCtx.beginPath();
+      mapCtx.moveTo(lastPt.x, lastPt.y);
+      mapCtx.lineTo(pt.x, pt.y);
+      mapCtx.stroke();
+    }
     lastPt = pt;
+  }
+
+  function floodFillAt(worldX, worldY, fillHex, tolerance) {
+    if (!mapCtx) return;
+    const w = mapPaint.width, h = mapPaint.height;
+    const sx = Math.floor(worldX), sy = Math.floor(worldY);
+    if (sx < 0 || sy < 0 || sx >= w || sy >= h) return;
+    let imgData;
+    try { imgData = mapCtx.getImageData(0, 0, w, h); } catch (e) { return; }
+    const data = imgData.data;
+    const idx = (x, y) => (y * w + x) * 4;
+    const si = idx(sx, sy);
+    const startR = data[si], startG = data[si + 1], startB = data[si + 2], startA = data[si + 3];
+    const fill = hexToRgb(fillHex);
+    const tol2 = tolerance * tolerance * 4;
+    const matches = (i) => {
+      const dr = data[i] - startR, dg = data[i + 1] - startG, db = data[i + 2] - startB, da = data[i + 3] - startA;
+      return (dr * dr + dg * dg + db * db + da * da) <= tol2;
+    };
+    // already filled with this color: nothing to do
+    if (Math.abs(startR - fill.r) < 2 && Math.abs(startG - fill.g) < 2 && Math.abs(startB - fill.b) < 2 && startA >= 250) return;
+
+    const visited = new Uint8Array(w * h);
+    const stack = [[sx, sy]];
+    while (stack.length) {
+      const [x, y] = stack.pop();
+      let xl = x;
+      while (xl > 0 && !visited[y * w + xl - 1] && matches(idx(xl - 1, y))) xl--;
+      let xr = x;
+      while (xr < w - 1 && !visited[y * w + xr + 1] && matches(idx(xr + 1, y))) xr++;
+      for (let xx = xl; xx <= xr; xx++) {
+        const p = y * w + xx;
+        if (visited[p]) continue;
+        visited[p] = 1;
+        const pi = p * 4;
+        data[pi] = fill.r; data[pi + 1] = fill.g; data[pi + 2] = fill.b; data[pi + 3] = 255;
+        if (y > 0 && !visited[p - w] && matches(idx(xx, y - 1))) stack.push([xx, y - 1]);
+        if (y < h - 1 && !visited[p + w] && matches(idx(xx, y + 1))) stack.push([xx, y + 1]);
+      }
+    }
+    mapCtx.putImageData(imgData, 0, 0);
   }
 
   function hitTestMapImage(worldPt) {
@@ -2801,6 +3051,13 @@
       lastPt = mapScreenToWorld(e.clientX, e.clientY);
       // draw a dot for single clicks
       strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
+      e.preventDefault();
+    } else if (mapTool === 'fill') {
+      if (!mapCtx) return;
+      pushUndo();
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      floodFillAt(p.x, p.y, mapColor, 40);
+      schedulePaintSave();
       e.preventDefault();
     } else if (mapTool === 'label') {
       const p = mapScreenToWorld(e.clientX, e.clientY);
@@ -2961,6 +3218,7 @@
   function showLabelToolbar(lb, el) {
     activeLabelId = lb.id;
     labelToolbar.classList.add('show');
+    $('cv-lbl-color-wheel').value = lb.color || '#E8E2D4';
     positionLabelToolbar(lb, el);
   }
   function hideLabelToolbar() {
@@ -2989,14 +3247,23 @@
     el.style.fontSize = lb.size + 'px';
     persist();
   };
-  labelToolbar.querySelectorAll('.lbl-color').forEach(sw => {
-    sw.onclick = () => {
-      const lb = activeLabel(), el = activeLabelEl();
-      if (!lb || !el) return;
-      lb.color = sw.dataset.c;
-      el.style.color = lb.color;
-      persist();
-    };
+  $('cv-lbl-color-wheel').oninput = (e) => {
+    const lb = activeLabel(), el = activeLabelEl();
+    if (!lb || !el) return;
+    lb.color = e.target.value;
+    el.style.color = lb.color;
+    persist();
+  };
+
+  // click anywhere outside the active label (and its toolbar) closes the toolbar,
+  // instead of it staying stuck on screen
+  document.addEventListener('pointerdown', (e) => {
+    if (!labelToolbar.classList.contains('show')) return;
+    if (e.target.closest('#cv-label-toolbar')) return;
+    const el = activeLabelEl();
+    if (el && el.contains(e.target)) return;
+    if (el) el.blur();
+    hideLabelToolbar();
   });
   $('cv-lbl-delete').onclick = () => {
     const lb = activeLabel();
@@ -3172,6 +3439,8 @@
         (state.map.images || []).forEach(mi => { mi.x += shiftX; mi.y += shiftY; });
         (state.map.labels || []).forEach(lb => { lb.x += shiftX; lb.y += shiftY; });
       }
+      undoStack = [];
+      redoStack = [];
       resizePaintCanvas(boardW(), boardH(), shiftX, shiftY);
       mapInner.style.width = boardW() + 'px';
       mapInner.style.height = boardH() + 'px';
@@ -3259,11 +3528,362 @@
     }
   });
 
+  /* ================= TIMELINE ================= */
+  const timelineView = $('cv-timeline-view');
+  const timelineWrap = $('cv-timeline-wrap');
+  const timelineInner = $('cv-timeline-inner');
+  const timelineEventsEl = $('cv-timeline-events');
+  const timelineZoomPct = $('cv-timeline-zoom-pct');
+  const timelineDetail = $('cv-timeline-detail');
+
+  const TL_W = 6000, TL_H = 500;
+  let tlVw = { x: 0, y: 0, scale: 0.3 };
+  let tlPan = null;
+  let tlLoaded = false;
+  let tlEventDrag = null;
+  let activeTlEventId = null;
+
+  function tlClampView() {
+    const r = timelineWrap.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const minS = Math.min(r.width / TL_W, r.height / TL_H) * MAP_FIT_MARGIN;
+    if (tlVw.scale < minS) tlVw.scale = minS;
+    if (tlVw.scale > 3) tlVw.scale = 3;
+    const w = TL_W * tlVw.scale, h = TL_H * tlVw.scale;
+    const minX = Math.min(0, r.width - w), maxX = Math.max(0, r.width - w);
+    tlVw.x = Math.min(maxX, Math.max(minX, tlVw.x));
+    const minY = Math.min(0, r.height - h), maxY = Math.max(0, r.height - h);
+    tlVw.y = Math.min(maxY, Math.max(minY, tlVw.y));
+  }
+  function tlApplyTransform() {
+    timelineInner.style.transform = `translate(${tlVw.x}px, ${tlVw.y}px) scale(${tlVw.scale})`;
+    timelineZoomPct.textContent = Math.round(tlVw.scale * 100) + '%';
+  }
+  function tlScreenToWorld(clientX, clientY) {
+    const rect = timelineWrap.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - tlVw.x) / tlVw.scale,
+      y: (clientY - rect.top - tlVw.y) / tlVw.scale,
+    };
+  }
+  function tlFitToScreen() {
+    const rect = timelineWrap.getBoundingClientRect();
+    if (!rect.width) return;
+    tlVw.scale = Math.min(rect.width / TL_W, rect.height / TL_H) * MAP_FIT_MARGIN;
+    const w = TL_W * tlVw.scale, h = TL_H * tlVw.scale;
+    tlVw.x = (rect.width - w) / 2;
+    tlVw.y = (rect.height - h) / 2;
+    tlClampView();
+    tlApplyTransform();
+  }
+
+  timelineInner.style.width = TL_W + 'px';
+  timelineInner.style.height = TL_H + 'px';
+
+  function openTimeline() {
+    timelineView.classList.add('open');
+    if (!tlLoaded) {
+      tlLoaded = true;
+    }
+    renderTimelineEvents();
+    setTimeout(tlFitToScreen, 30);
+  }
+  function closeTimeline() {
+    closeTimelineDetail();
+    timelineView.classList.remove('open');
+  }
+  function resetTimelineForReload() {
+    tlLoaded = false;
+    if (timelineView.classList.contains('open')) openTimeline();
+  }
+
+  $('cv-open-timeline-btn').onclick = openTimeline;
+  $('cv-timeline-back').onclick = closeTimeline;
+
+  window.addEventListener('resize', () => {
+    if (timelineView.classList.contains('open')) { tlClampView(); tlApplyTransform(); }
+  });
+
+  timelineWrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      const rect = timelineWrap.getBoundingClientRect();
+      const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      const prev = tlVw.scale;
+      let ns = prev * (1 - e.deltaY * 0.0015);
+      tlVw.x = cx - ((cx - tlVw.x) / prev) * ns;
+      tlVw.y = cy - ((cy - tlVw.y) / prev) * ns;
+      tlVw.scale = ns;
+    } else {
+      tlVw.x -= e.deltaX;
+      tlVw.y -= e.deltaY;
+    }
+    tlClampView();
+    tlApplyTransform();
+  }, { passive: false });
+
+  function tlZoomBy(f) {
+    const rect = timelineWrap.getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    const prev = tlVw.scale;
+    let ns = prev * f;
+    tlVw.x = cx - ((cx - tlVw.x) / prev) * ns;
+    tlVw.y = cy - ((cy - tlVw.y) / prev) * ns;
+    tlVw.scale = ns;
+    tlClampView();
+    tlApplyTransform();
+  }
+  $('cv-timeline-zoom-in').onclick = () => tlZoomBy(1.15);
+  $('cv-timeline-zoom-out').onclick = () => tlZoomBy(0.87);
+  $('cv-timeline-zoom-fit').onclick = tlFitToScreen;
+
+  timelineWrap.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.cv-tl-event') || e.target.closest('#cv-timeline-zoom')) return;
+    tlPan = { sx: e.clientX, sy: e.clientY, ox: tlVw.x, oy: tlVw.y };
+    timelineWrap.classList.add('panning');
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (tlPan) {
+      tlVw.x = tlPan.ox + (e.clientX - tlPan.sx);
+      tlVw.y = tlPan.oy + (e.clientY - tlPan.sy);
+      tlClampView();
+      tlApplyTransform();
+    }
+  });
+  window.addEventListener('pointerup', () => {
+    if (tlPan) { tlPan = null; timelineWrap.classList.remove('panning'); }
+  });
+
+  function currentTlEvents() { return state.timeline.events; }
+
+  function clampTlEvent(ev) {
+    ev.x = Math.max(20, Math.min(TL_W - 20, ev.x));
+  }
+
+  function renderTimelineEvents() {
+    timelineEventsEl.innerHTML = '';
+    currentTlEvents()
+      .slice()
+      .sort((a, b) => a.x - b.x)
+      .forEach(ev => {
+        clampTlEvent(ev);
+        const el = document.createElement('div');
+        el.className = 'cv-tl-event' + (ev.id === activeTlEventId ? ' active' : '');
+        el.dataset.id = ev.id;
+        el.style.left = ev.x + 'px';
+
+        const dot = document.createElement('div');
+        dot.className = 'cv-tl-dot';
+        const label = document.createElement('div');
+        label.className = 'cv-tl-label';
+        label.textContent = ev.title && ev.title.trim() ? ev.title.trim() : '(untitled)';
+        const dateEl = document.createElement('div');
+        dateEl.className = 'cv-tl-date';
+        dateEl.textContent = ev.date || '';
+
+        el.appendChild(dot);
+        el.appendChild(label);
+        if (ev.date) el.appendChild(dateEl);
+
+        el.onpointerdown = (e) => {
+          e.stopPropagation();
+          tlEventDrag = { ev, sx: e.clientX, ox: ev.x, moved: false };
+          el.classList.add('dragging');
+        };
+
+        timelineEventsEl.appendChild(el);
+      });
+  }
+
+  window.addEventListener('pointermove', (e) => {
+    if (!tlEventDrag) return;
+    const dx = (e.clientX - tlEventDrag.sx) / tlVw.scale;
+    if (Math.abs(dx) > 3) tlEventDrag.moved = true;
+    tlEventDrag.ev.x = tlEventDrag.ox + dx;
+    clampTlEvent(tlEventDrag.ev);
+    const el = timelineEventsEl.querySelector(`[data-id="${tlEventDrag.ev.id}"]`);
+    if (el) el.style.left = tlEventDrag.ev.x + 'px';
+  });
+  window.addEventListener('pointerup', () => {
+    if (tlEventDrag) {
+      const wasMoved = tlEventDrag.moved;
+      const ev = tlEventDrag.ev;
+      const el = timelineEventsEl.querySelector(`[data-id="${ev.id}"]`);
+      if (el) el.classList.remove('dragging');
+      tlEventDrag = null;
+      if (wasMoved) {
+        persist();
+      } else {
+        openTimelineDetail(ev.id);
+      }
+    }
+  });
+
+  $('cv-timeline-add').onclick = () => {
+    const rect = timelineWrap.getBoundingClientRect();
+    const center = tlScreenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const ev = { id: uid('tl'), x: center.x, date: '', title: '', description: '', images: [] };
+    currentTlEvents().push(ev);
+    persist();
+    renderTimelineEvents();
+    openTimelineDetail(ev.id);
+  };
+
+  function openTimelineDetail(id) {
+    const ev = currentTlEvents().find(e => e.id === id);
+    if (!ev) return;
+    if (!Array.isArray(ev.images)) ev.images = [];
+    activeTlEventId = id;
+    $('cv-timeline-detail-date').value = ev.date || '';
+    $('cv-timeline-detail-title').value = ev.title || '';
+    $('cv-timeline-detail-desc').value = ev.description || '';
+    renderTimelineDetailGallery(ev);
+    timelineDetail.classList.add('show');
+    renderTimelineEvents();
+  }
+  function closeTimelineDetail() {
+    activeTlEventId = null;
+    timelineDetail.classList.remove('show');
+    renderTimelineEvents();
+  }
+  function activeTlEvent() {
+    return currentTlEvents().find(e => e.id === activeTlEventId);
+  }
+
+  $('cv-timeline-detail-close').onclick = closeTimelineDetail;
+  timelineDetail.onpointerdown = (e) => e.stopPropagation();
+
+  document.addEventListener('pointerdown', (e) => {
+    if (!timelineDetail.classList.contains('show')) return;
+    if (e.target.closest('#cv-timeline-detail')) return;
+    if (e.target.closest('.cv-tl-event')) return; // clicking another marker handles its own open/close
+    closeTimelineDetail();
+  });
+
+  $('cv-timeline-detail-date').oninput = (e) => {
+    const ev = activeTlEvent(); if (!ev) return;
+    ev.date = e.target.value; persist(); renderTimelineEvents();
+  };
+  $('cv-timeline-detail-title').oninput = (e) => {
+    const ev = activeTlEvent(); if (!ev) return;
+    ev.title = e.target.value; persist(); renderTimelineEvents();
+  };
+  $('cv-timeline-detail-desc').oninput = (e) => {
+    const ev = activeTlEvent(); if (!ev) return;
+    ev.description = e.target.value; persist();
+  };
+
+  $('cv-timeline-detail-delete').onclick = () => {
+    const ev = activeTlEvent(); if (!ev) return;
+    showConfirm({
+      title: `Delete this date?`,
+      msg: (ev.title || ev.date) ? `"${ev.title || ev.date}" will be permanently deleted.` : "This can't be undone.",
+      okLabel: 'Delete date',
+      onConfirm: () => {
+        (ev.images || []).forEach(k => { delete imageCache[k]; idbDelete('images', k).catch(() => {}); });
+        state.timeline.events = state.timeline.events.filter(e => e.id !== ev.id);
+        closeTimelineDetail();
+        persist();
+      },
+    });
+  };
+
+  function renderTimelineDetailGallery(ev) {
+    const gal = $('cv-timeline-detail-gallery');
+    gal.innerHTML = '';
+    (ev.images || []).forEach(key => {
+      const wrap = document.createElement('div');
+      wrap.className = 'cv-wimg';
+      const img = document.createElement('img');
+      const src = imageCache[key];
+      if (src) img.src = src;
+      else idbGet('images', key).then(v => { if (v) { imageCache[key] = v; img.src = v; } }).catch(() => {});
+      const del = document.createElement('button');
+      del.textContent = '\u2715';
+      del.title = 'Remove image';
+      del.onclick = () => {
+        ev.images = ev.images.filter(k => k !== key);
+        delete imageCache[key];
+        idbDelete('images', key).catch(() => {});
+        persist();
+        renderTimelineDetailGallery(ev);
+      };
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      gal.appendChild(wrap);
+    });
+  }
+
+  function addTimelineImages(files) {
+    const ev = activeTlEvent();
+    if (!ev) return;
+    if (!Array.isArray(ev.images)) ev.images = [];
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = async () => {
+          const maxDim = 1200;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const s = maxDim / Math.max(width, height);
+            width = Math.round(width * s);
+            height = Math.round(height * s);
+          }
+          const c = document.createElement('canvas');
+          c.width = width; c.height = height;
+          c.getContext('2d').drawImage(img, 0, 0, width, height);
+          const dataUrl = c.toDataURL('image/jpeg', 0.85);
+          const key = uid('img');
+          try { await idbSet('images', key, dataUrl); } catch (e) { markStorageBroken(); }
+          imageCache[key] = dataUrl;
+          ev.images.push(key);
+          persist();
+          renderTimelineDetailGallery(ev);
+          flashSaved();
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('cv-timeline-detail-addimg').onclick = () => $('cv-timeline-img-input').click();
+  $('cv-timeline-img-input').onchange = () => {
+    const files = $('cv-timeline-img-input').files;
+    if (files && files.length) addTimelineImages(files);
+    $('cv-timeline-img-input').value = '';
+  };
+
+  window.addEventListener('paste', (e) => {
+    if (!timelineDetail.classList.contains('show')) return;
+    const active = document.activeElement;
+    if (active && (active.id === 'cv-timeline-detail-desc' || active.id === 'cv-timeline-detail-title' || active.id === 'cv-timeline-detail-date')) {
+      // still allow pasting an image even while a text field is focused
+    }
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      addTimelineImages(files);
+    }
+  });
+
   /* --- Esc closes fullscreen views --- */
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     if (confirmOverlay.classList.contains('show')) return; // handled elsewhere
     if (writingView.classList.contains('open')) closeWriting();
+    else if (timelineDetail.classList.contains('show')) closeTimelineDetail();
+    else if (timelineView.classList.contains('open')) closeTimeline();
     else if (mapView.classList.contains('open')) { hideLabelToolbar(); closeMap(); }
   });
 
@@ -3273,4 +3893,3 @@
 </script>
 </body>
 </html>
-
