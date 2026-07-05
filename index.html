@@ -659,6 +659,7 @@
   #cv-brush-cursor.erase { border: 1.5px dashed var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
   #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: none; }
   #cv-map-wrap.tool-fill { cursor: cell; }
+  #cv-map-wrap.tool-pick { cursor: crosshair; }
 
   /* ---------- MAP IMAGES ---------- */
   #cv-map-images { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
@@ -1020,11 +1021,11 @@
       <button class="cv-map-tool active" data-tool="move" title="Pan the map / drag images and labels">&#10021; Move</button>
       <button class="cv-map-tool" data-tool="paint" title="Paint on the map">&#128396; Paint</button>
       <button class="cv-map-tool" data-tool="fill" title="Fill an enclosed area with the current color">&#129529; Fill</button>
+      <button class="cv-map-tool" data-tool="pick" title="Click any painted spot to reuse its exact color">&#128167; Pick color</button>
       <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
       <input type="color" id="cv-map-custom-color" value="#7A8471" title="Brush color">
       <input type="range" id="cv-map-size" min="2" max="80" value="10" title="Brush size">
-      <input type="range" id="cv-map-texture" min="0" max="100" value="0" title="Texture: smooth to rough">
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
       <button class="cv-map-tool" id="cv-map-redo" title="Redo">&#8631; Redo</button>
       <span class="spacer"></span>
@@ -2671,7 +2672,6 @@
   let mapTool = 'move';
   let mapColor = '#7A8471';
   let mapBrush = 10;
-  let mapTexture = 0;
   let mapVw = { x: 0, y: 0, scale: 0.4 };
   let mapPan = null;
   let painting = false;
@@ -2691,7 +2691,6 @@
     mapBrush = parseInt(e.target.value, 10);
     updateBrushCursor();
   };
-  $('cv-map-texture').oninput = (e) => { mapTexture = parseInt(e.target.value, 10); };
 
   const MAP_FIT_MARGIN = 0.93; // keeps a visible gap around the board at min zoom / on fit
 
@@ -2918,50 +2917,20 @@
 
   function strokeTo(pt) {
     if (!mapCtx || !lastPt) return;
+    mapCtx.lineCap = 'round';
+    mapCtx.lineJoin = 'round';
+    mapCtx.lineWidth = mapBrush;
     if (mapTool === 'erase') {
       mapCtx.globalCompositeOperation = 'destination-out';
-      mapCtx.lineCap = 'round';
-      mapCtx.lineJoin = 'round';
-      mapCtx.lineWidth = mapBrush;
       mapCtx.strokeStyle = 'rgba(0,0,0,1)';
-      mapCtx.beginPath();
-      mapCtx.moveTo(lastPt.x, lastPt.y);
-      mapCtx.lineTo(pt.x, pt.y);
-      mapCtx.stroke();
-      lastPt = pt;
-      return;
-    }
-    mapCtx.globalCompositeOperation = 'source-over';
-    if (mapTexture > 0) {
-      // rough/textured brush: scattered semi-transparent dabs instead of one flat line
-      const dx = pt.x - lastPt.x, dy = pt.y - lastPt.y;
-      const dist = Math.hypot(dx, dy);
-      const step = Math.max(1, mapBrush * 0.22);
-      const steps = Math.max(1, Math.round(dist / step));
-      const rgb = hexToRgb(mapColor);
-      const jitter = (mapTexture / 100) * mapBrush * 0.55;
-      for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        const px = lastPt.x + dx * t, py = lastPt.y + dy * t;
-        const ox = (Math.random() - 0.5) * jitter;
-        const oy = (Math.random() - 0.5) * jitter;
-        const rad = (mapBrush / 2) * (0.65 + Math.random() * 0.55);
-        const alpha = 0.4 + Math.random() * 0.35;
-        mapCtx.beginPath();
-        mapCtx.fillStyle = `rgba(${rgb.r},${rgb.g},${rgb.b},${alpha.toFixed(2)})`;
-        mapCtx.arc(px + ox, py + oy, rad, 0, Math.PI * 2);
-        mapCtx.fill();
-      }
     } else {
-      mapCtx.lineCap = 'round';
-      mapCtx.lineJoin = 'round';
-      mapCtx.lineWidth = mapBrush;
+      mapCtx.globalCompositeOperation = 'source-over';
       mapCtx.strokeStyle = mapColor;
-      mapCtx.beginPath();
-      mapCtx.moveTo(lastPt.x, lastPt.y);
-      mapCtx.lineTo(pt.x, pt.y);
-      mapCtx.stroke();
     }
+    mapCtx.beginPath();
+    mapCtx.moveTo(lastPt.x, lastPt.y);
+    mapCtx.lineTo(pt.x, pt.y);
+    mapCtx.stroke();
     lastPt = pt;
   }
 
@@ -3004,6 +2973,19 @@
       }
     }
     mapCtx.putImageData(imgData, 0, 0);
+  }
+
+  function pickColorAt(worldX, worldY) {
+    if (!mapCtx) return null;
+    const x = Math.floor(worldX), y = Math.floor(worldY);
+    if (x < 0 || y < 0 || x >= mapPaint.width || y >= mapPaint.height) return null;
+    try {
+      const d = mapCtx.getImageData(x, y, 1, 1).data;
+      if (d[3] < 10) return null; // nothing painted at that spot
+      return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      return null;
+    }
   }
 
   function hitTestMapImage(worldPt) {
@@ -3058,6 +3040,15 @@
       const p = mapScreenToWorld(e.clientX, e.clientY);
       floodFillAt(p.x, p.y, mapColor, 40);
       schedulePaintSave();
+      e.preventDefault();
+    } else if (mapTool === 'pick') {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const hex = pickColorAt(p.x, p.y);
+      if (hex) {
+        mapColor = hex;
+        $('cv-map-custom-color').value = hex;
+      }
+      setMapTool('paint');
       e.preventDefault();
     } else if (mapTool === 'label') {
       const p = mapScreenToWorld(e.clientX, e.clientY);
@@ -3550,10 +3541,10 @@
     if (tlVw.scale < minS) tlVw.scale = minS;
     if (tlVw.scale > 3) tlVw.scale = 3;
     const w = TL_W * tlVw.scale, h = TL_H * tlVw.scale;
-    const minX = Math.min(0, r.width - w), maxX = Math.max(0, r.width - w);
-    tlVw.x = Math.min(maxX, Math.max(minX, tlVw.x));
-    const minY = Math.min(0, r.height - h), maxY = Math.max(0, r.height - h);
-    tlVw.y = Math.min(maxY, Math.max(minY, tlVw.y));
+    if (w <= r.width) tlVw.x = (r.width - w) / 2; // locked, centered while it fits
+    else tlVw.x = Math.min(0, Math.max(r.width - w, tlVw.x));
+    if (h <= r.height) tlVw.y = (r.height - h) / 2; // locked, centered while it fits
+    else tlVw.y = Math.min(0, Math.max(r.height - h, tlVw.y));
   }
   function tlApplyTransform() {
     timelineInner.style.transform = `translate(${tlVw.x}px, ${tlVw.y}px) scale(${tlVw.scale})`;
@@ -3893,4 +3884,3 @@
 </script>
 </body>
 </html>
-
