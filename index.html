@@ -697,9 +697,10 @@
   .cv-resize-wrap { position: relative; }
   #cv-resize-panel {
     display: none;
-    position: absolute; top: 38px; left: 0; z-index: 30;
+    position: absolute; top: 38px; right: 0; left: auto; z-index: 30;
     background: var(--surface-hi); border: 1px solid var(--border); border-radius: 6px;
-    padding: 10px; width: 260px;
+    padding: 10px; width: 250px;
+    max-width: calc(100vw - 32px);
     box-shadow: 0 10px 28px rgba(0,0,0,0.5);
   }
   #cv-resize-panel.show { display: block; }
@@ -1143,8 +1144,8 @@
     if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false, images: [] };
     if (!Array.isArray(state.map.labels)) state.map.labels = [];
     if (!Array.isArray(state.map.images)) state.map.images = [];
-    if (typeof state.map.w !== 'number') state.map.w = 3200;
-    if (typeof state.map.h !== 'number') state.map.h = 1400;
+    if (typeof state.map.w !== 'number') state.map.w = 3600;
+    if (typeof state.map.h !== 'number') state.map.h = 1300;
     // migrate old combined image labels to separate title/caption
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
@@ -2496,7 +2497,7 @@
   const imgSel = $('cv-map-imgsel');
   const brushCursor = $('cv-brush-cursor');
 
-  const MAP_DEFAULT_W = 3200, MAP_DEFAULT_H = 1400;
+  const MAP_DEFAULT_W = 3600, MAP_DEFAULT_H = 1300;
   function boardW() { return (state.map && state.map.w) || MAP_DEFAULT_W; }
   function boardH() { return (state.map && state.map.h) || MAP_DEFAULT_H; }
   function resizePaintCanvas(newW, newH, offsetX, offsetY) {
@@ -2540,10 +2541,12 @@
     updateBrushCursor();
   };
 
+  const MAP_FIT_MARGIN = 0.93; // keeps a visible gap around the board at min zoom / on fit
+
   function clampMapView() {
     const r = mapWrap.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    const minS = Math.min(r.width / boardW(), r.height / boardH());
+    const minS = Math.min(r.width / boardW(), r.height / boardH()) * MAP_FIT_MARGIN;
     if (mapVw.scale < minS) mapVw.scale = minS;
     if (mapVw.scale > 3) mapVw.scale = 3;
     const w = boardW() * mapVw.scale, h = boardH() * mapVw.scale;
@@ -2569,7 +2572,7 @@
   function fitMapToScreen() {
     const rect = mapWrap.getBoundingClientRect();
     if (!rect.width) return;
-    mapVw.scale = Math.min(rect.width / boardW(), rect.height / boardH());
+    mapVw.scale = Math.min(rect.width / boardW(), rect.height / boardH()) * MAP_FIT_MARGIN;
     clampMapView();
     applyMapTransform();
   }
@@ -3198,7 +3201,19 @@
   const resizePanel = $('cv-resize-panel');
   resizeBtn.onclick = (e) => {
     e.stopPropagation();
-    resizePanel.classList.toggle('show');
+    const willShow = !resizePanel.classList.contains('show');
+    resizePanel.classList.toggle('show', willShow);
+    if (willShow) {
+      resizePanel.style.left = 'auto';
+      resizePanel.style.right = '0';
+      requestAnimationFrame(() => {
+        const r = resizePanel.getBoundingClientRect();
+        if (r.left < 8) {
+          resizePanel.style.right = 'auto';
+          resizePanel.style.left = '8px';
+        }
+      });
+    }
   };
   document.addEventListener('click', (e) => {
     if (resizePanel.classList.contains('show') && !e.target.closest('#cv-resize-panel') && !e.target.closest('#cv-map-resize-btn')) {
