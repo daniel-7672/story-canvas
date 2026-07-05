@@ -598,8 +598,9 @@
   #cv-writing-scroll { flex: 1; overflow-y: auto; }
   #cv-writing-body {
     display: block;
-    width: 100%; max-width: 760px; margin: 0 auto;
-    padding: 36px 28px 120px 28px;
+    width: 100%; margin: 0;
+    padding: 24px 4vw 160px 4vw;
+    overflow: hidden;
     background: transparent; border: none; color: var(--text);
     font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.75;
     resize: none; min-height: 100%;
@@ -696,6 +697,97 @@
   }
 
   /* ---------- CONFIRM DIALOG ---------- */
+  /* ---------- SIDEBAR ACCORDION ---------- */
+  .cv-acc { border-top: 1px dashed var(--border); }
+  .cv-acc-head {
+    width: 100%; text-align: left;
+    font-family: 'Fraunces', serif; font-size: 13.5px; font-weight: 600;
+    color: var(--text-dim); background: transparent; border: none;
+    padding: 11px 14px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .cv-acc-head:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+  .cv-acc-chevron { font-size: 10px; color: var(--text-faint); transition: transform 0.15s ease; display: inline-block; }
+  .cv-acc.open .cv-acc-chevron { transform: rotate(90deg); }
+  .cv-acc-actions { margin-left: auto; display: flex; }
+  .cv-acc-body { display: none; padding-bottom: 8px; }
+  .cv-acc.open .cv-acc-body { display: block; }
+
+  #cv-sidebar-bottom { margin-top: auto; border-top: 1px dashed var(--border); padding-top: 8px; }
+  #cv-open-map-btn {
+    display: flex; width: calc(100% - 16px);
+    margin: 0 8px;
+    font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600;
+    color: var(--text); background: var(--surface); border: 1px solid var(--border-soft);
+    text-align: left; padding: 11px 12px; border-radius: 5px; cursor: pointer;
+    align-items: center; gap: 8px; transition: background 0.15s, border-color 0.15s;
+  }
+  #cv-open-map-btn:hover { background: var(--surface-hi); border-color: var(--border); }
+
+  /* ---------- BRUSH CURSOR ---------- */
+  #cv-brush-cursor {
+    position: absolute; border-radius: 50%;
+    pointer-events: none; display: none; z-index: 30;
+    transform: translate(-50%, -50%);
+  }
+  #cv-brush-cursor.paint { border: 1.5px solid var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
+  #cv-brush-cursor.erase { border: 1.5px dashed var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
+  #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: none; }
+
+  /* ---------- MAP IMAGES ---------- */
+  #cv-map-images { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .cv-map-img { position: absolute; user-select: none; }
+  .cv-map-img img { width: 100%; height: 100%; display: block; pointer-events: none; }
+  #cv-map-imgsel {
+    position: absolute; display: none;
+    border: 2px dashed var(--wax-dim);
+    pointer-events: none; z-index: 15;
+  }
+  #cv-map-imgsel.show { display: block; }
+  #cv-map-imgdel {
+    position: absolute; top: -14px; right: -14px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--surface-hi); border: 1px solid var(--wax-dim); color: var(--wax);
+    cursor: pointer; font-size: 12px; pointer-events: auto;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #cv-map-imgresize {
+    position: absolute; bottom: -12px; right: -12px;
+    width: 24px; height: 24px; border-radius: 4px;
+    background: var(--surface-hi); border: 1px solid var(--wax-dim);
+    cursor: nwse-resize; pointer-events: auto;
+  }
+  #cv-map-custom-color { width: 34px; height: 30px; border: 1px solid var(--border-soft); border-radius: 5px; background: var(--surface); cursor: pointer; padding: 2px; }
+
+  /* ---------- WRITING GALLERY & FULL WIDTH ---------- */
+  #cv-writing-gallery {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    padding: 16px 4vw 0 4vw;
+  }
+  #cv-writing-gallery:empty { display: none; }
+  .cv-wimg { position: relative; }
+  .cv-wimg img { height: 130px; border-radius: 4px; display: block; border: 1px solid var(--border-soft); }
+  .cv-wimg button {
+    position: absolute; top: -7px; right: -7px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--surface-hi); border: 1px solid var(--border); color: var(--text-dim);
+    font-size: 10px; cursor: pointer; opacity: 0;
+    display: flex; align-items: center; justify-content: center; transition: opacity 0.12s;
+  }
+  .cv-wimg:hover button { opacity: 1; }
+  .cv-wimg button:hover { color: var(--wax); border-color: var(--wax-dim); }
+
+  /* ---------- SMOOTH DRAGGING ---------- */
+  body.cv-dragging { user-select: none; }
+  .cv-node-head, .cv-node-img-wrap, #cv-map-wrap { touch-action: none; }
+
+  /* Disconnect mode: show connection delete dots only then */
+  .cv-conn-del { display: none; }
+  #cv-canvas-wrap.disconnect-mode .cv-conn-del {
+    display: flex; width: 22px; height: 22px; font-size: 11px; opacity: 0.9;
+  }
+
   #cv-confirm-overlay {
     position: fixed;
     inset: 0;
@@ -769,34 +861,42 @@
       <span class="eyebrow">Workshop</span>
       <textarea id="cv-project-name" rows="2" placeholder="Untitled story">Untitled Story</textarea>
     </div>
-    <div class="cv-boardlist" id="cv-boardlist"></div>
-    <button id="cv-new-board-btn">+ new board</button>
 
-    <div class="cv-section-head">
-      <span class="eyebrow">Writings</span>
-      <button class="cv-section-add" id="cv-new-writing-btn" title="New writing">+</button>
+    <div class="cv-acc open" id="cv-acc-boards">
+      <button class="cv-acc-head"><span class="cv-acc-chevron">&#9656;</span> Boards</button>
+      <div class="cv-acc-body">
+        <div class="cv-boardlist" id="cv-boardlist"></div>
+        <button id="cv-new-board-btn">+ new board</button>
+      </div>
     </div>
-    <div id="cv-writinglist"></div>
 
-    <div class="cv-section-head">
-      <span class="eyebrow">World</span>
+    <div class="cv-acc" id="cv-acc-writings">
+      <button class="cv-acc-head"><span class="cv-acc-chevron">&#9656;</span> Writings
+        <span class="cv-acc-actions"><button class="cv-section-add" id="cv-new-writing-btn" title="New writing">+</button></span>
+      </button>
+      <div class="cv-acc-body">
+        <div id="cv-writinglist"></div>
+      </div>
     </div>
-    <button id="cv-open-map-btn">&#128506; World Map</button>
 
-    <div id="cv-layers-head">
-      <span class="eyebrow">Cards on this board</span>
+    <div class="cv-acc" id="cv-acc-cards">
+      <button class="cv-acc-head"><span class="cv-acc-chevron">&#9656;</span> Cards on this board</button>
+      <div class="cv-acc-body">
+        <div class="cv-layerlist" id="cv-layerlist"></div>
+      </div>
     </div>
-    <div class="cv-layerlist" id="cv-layerlist"></div>
 
-    <div id="cv-backup-row">
-      <button id="cv-export-btn">&#8659; Download backup</button>
-      <button id="cv-import-btn" title="Restore from a backup file">Import</button>
-      <input type="file" id="cv-import-input" accept=".json,application/json" style="display:none;">
-    </div>
-    <div id="cv-storage-note">Saves automatically to this device. Download a backup now and then to be safe.</div>
-
-    <div id="cv-exit-block">
-      <button id="cv-exit-btn">&#x2715; Close app</button>
+    <div id="cv-sidebar-bottom">
+      <button id="cv-open-map-btn">&#128506; World Map</button>
+      <div id="cv-backup-row">
+        <button id="cv-export-btn">&#8659; Download backup</button>
+        <button id="cv-import-btn" title="Restore from a backup file">Import</button>
+        <input type="file" id="cv-import-input" accept=".json,application/json" style="display:none;">
+      </div>
+      <div id="cv-storage-note">Saves automatically to this device. Download a backup now and then to be safe.</div>
+      <div id="cv-exit-block">
+        <button id="cv-exit-btn">&#x2715; Close app</button>
+      </div>
     </div>
   </div>
 
@@ -807,6 +907,7 @@
       <button class="cv-tool-btn primary" id="cv-add-note-btn">+ Note</button>
       <button class="cv-tool-btn accent-sage" id="cv-add-img-btn">+ Image</button>
       <button class="cv-tool-btn" id="cv-connect-btn">&#8599; Connect</button>
+      <button class="cv-tool-btn" id="cv-disconnect-btn">&#8623; Disconnect</button>
     </div>
 
     <svg id="cv-connectors"></svg>
@@ -833,34 +934,41 @@
       <button class="cv-back-btn" id="cv-writing-back">&larr; Back</button>
       <input id="cv-writing-title" placeholder="Untitled writing">
       <span id="cv-writing-meta">0 words</span>
+      <button class="cv-map-tool" id="cv-writing-addimg" title="Add an image for visual reference">+ Image</button>
+      <input type="file" id="cv-writing-img-input" accept="image/*" multiple style="display:none;">
       <button id="cv-writing-delete" title="Delete this writing">delete</button>
     </div>
     <div id="cv-writing-scroll">
-      <textarea id="cv-writing-body" placeholder="Write freely. Everything saves as you type."></textarea>
+      <div id="cv-writing-gallery"></div>
+      <textarea id="cv-writing-body" placeholder="Write freely. Everything saves as you type. Paste images any time for reference."></textarea>
     </div>
   </div>
 
   <div id="cv-map-view">
     <div id="cv-map-topbar">
       <button class="cv-back-btn" id="cv-map-back">&larr; Back</button>
-      <button class="cv-map-tool active" data-tool="move" title="Pan the map / drag labels">&#10021; Move</button>
+      <button class="cv-map-tool active" data-tool="move" title="Pan the map / drag images and labels">&#10021; Move</button>
       <button class="cv-map-tool" data-tool="paint" title="Paint on the map">&#128396; Paint</button>
       <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
-      <span id="cv-map-swatches"></span>
-      <input type="color" id="cv-map-custom-color" value="#C9613D" title="Custom color">
-      <input type="range" id="cv-map-size" min="2" max="60" value="10" title="Brush size">
+      <input type="color" id="cv-map-custom-color" value="#7A8471" title="Brush color">
+      <input type="range" id="cv-map-size" min="2" max="80" value="10" title="Brush size">
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
       <span class="spacer"></span>
-      <button class="cv-map-tool" id="cv-map-setbase">Set base image</button>
-      <input type="file" id="cv-map-base-input" accept="image/*" style="display:none;">
+      <button class="cv-map-tool" id="cv-map-addimg">+ Add map images</button>
+      <input type="file" id="cv-map-img-input" accept="image/*" multiple style="display:none;">
     </div>
     <div id="cv-map-wrap">
       <div id="cv-map-inner">
-        <img id="cv-map-base" style="display:none;" draggable="false">
+        <div id="cv-map-images"></div>
         <canvas id="cv-map-paint" width="2400" height="1600"></canvas>
         <div id="cv-map-labels"></div>
+        <div id="cv-map-imgsel">
+          <button id="cv-map-imgdel" title="Remove this image (drawings stay)">&#x2715;</button>
+          <div id="cv-map-imgresize"></div>
+        </div>
       </div>
+      <div id="cv-brush-cursor"></div>
       <div id="cv-label-toolbar">
         <button id="cv-lbl-smaller" title="Smaller">A-</button>
         <button id="cv-lbl-bigger" title="Bigger">A+</button>
@@ -876,7 +984,7 @@
         <button class="cv-zoom-btn" id="cv-map-zoom-in">+</button>
         <button class="cv-zoom-btn" id="cv-map-zoom-fit" title="Fit map to screen">&#8982;</button>
       </div>
-      <div id="cv-map-hint">Move: drag to pan, drag labels &middot; Paint/Erase: draw on the map &middot; Label: click to add a place name &middot; Click a label to edit it</div>
+      <div id="cv-map-hint">Move: drag to pan, drag images &amp; labels (images snap together) &middot; Paint/Erase: draw &middot; Label: click to name a place</div>
     </div>
   </div>
 
@@ -946,7 +1054,6 @@
 
   let view = { x: 0, y: 0, scale: 1 };
   let saveTimeout = null;
-  let dragState = null;
   let connectMode = false;
   let connectFrom = null;
   let selectedNode = null;
@@ -1060,8 +1167,9 @@
     }
     // upgrade older saves with new sections
     if (!Array.isArray(state.writings)) state.writings = [];
-    if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
+    if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false, images: [] };
     if (!Array.isArray(state.map.labels)) state.map.labels = [];
+    if (!Array.isArray(state.map.images)) state.map.images = [];
     // migrate old combined image labels to separate title/caption
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
@@ -1148,6 +1256,34 @@
   }
 
   $('cv-sidebar-toggle').onclick = () => $('cv-sidebar').classList.toggle('collapsed');
+
+  // Sidebar accordion (folder-style sections)
+  document.querySelectorAll('.cv-acc-head').forEach(head => {
+    head.onclick = (e) => {
+      if (e.target.closest('.cv-section-add')) return; // + buttons act, don't toggle
+      head.parentElement.classList.toggle('open');
+    };
+  });
+
+  // Disconnect mode: show clickable dots on every connection
+  let disconnectMode = false;
+  function setDisconnectMode(on) {
+    disconnectMode = on;
+    wrap.classList.toggle('disconnect-mode', on);
+    const b = $('cv-disconnect-btn');
+    b.style.background = on ? 'var(--wax-dim)' : '';
+    b.style.color = on ? '#1C1A17' : '';
+  }
+  $('cv-disconnect-btn').onclick = () => {
+    if (connectMode) {
+      connectMode = false;
+      connectFrom = null;
+      wrap.classList.remove('connecting');
+      $('cv-connect-btn').style.background = '';
+      $('cv-connect-btn').style.color = '';
+    }
+    setDisconnectMode(!disconnectMode);
+  };
 
   // Fullscreen toggle
   const fsBtn = $('cv-fullscreen-btn');
@@ -1278,13 +1414,15 @@
   /* ---------------- BACKUP ---------------- */
   $('cv-export-btn').onclick = async () => {
     const images = {};
+    const keys = new Set();
     Object.values(state.nodesByBoard).forEach(nodes => {
-      (nodes || []).forEach(n => {
-        if (n.imageKey && imageCache[n.imageKey]) images[n.imageKey] = imageCache[n.imageKey];
-      });
+      (nodes || []).forEach(n => { if (n.imageKey) keys.add(n.imageKey); });
     });
-    // include the world map layers, reading from the database if not yet loaded
-    for (const key of ['map-base', 'map-paint']) {
+    (state.map.images || []).forEach(mi => keys.add(mi.key));
+    (state.writings || []).forEach(w => (w.images || []).forEach(k => keys.add(k)));
+    keys.add('map-paint');
+    keys.add('map-base'); // legacy, harmless if absent
+    for (const key of keys) {
       try {
         const v = imageCache[key] || await idbGet('images', key);
         if (v) images[key] = v;
@@ -1374,6 +1512,7 @@
   $('cv-add-img-btn').onclick = () => addNode('image');
 
   $('cv-connect-btn').onclick = () => {
+    if (disconnectMode) setDisconnectMode(false);
     connectMode = !connectMode;
     connectFrom = null;
     wrap.classList.toggle('connecting', connectMode);
@@ -1563,10 +1702,7 @@
       e.stopPropagation();
       selectNode(node.id);
       el.focus({ preventScroll: true });
-      dragState = { node, startX: e.clientX, startY: e.clientY, startNodeX: node.x, startNodeY: node.y };
-      el.classList.add('dragging');
-      window.addEventListener('pointermove', onDragMove);
-      window.addEventListener('pointerup', onDragUp);
+      beginNodeDrag(e, node, el, imgWrap);
     };
 
     el.tabIndex = -1;
@@ -1857,16 +1993,10 @@
     el.appendChild(handle);
 
     head.onpointerdown = (e) => {
-      if (e.target !== head && e.target !== dot) return;
+      if (e.target.closest('input, button, textarea')) return;
       e.stopPropagation();
       selectNode(node.id);
-      dragState = {
-        node, startX: e.clientX, startY: e.clientY,
-        startNodeX: node.x, startNodeY: node.y,
-      };
-      el.classList.add('dragging');
-      window.addEventListener('pointermove', onDragMove);
-      window.addEventListener('pointerup', onDragUp);
+      beginNodeDrag(e, node, el, head);
     };
 
     el.onclick = (e) => {
@@ -1893,29 +2023,47 @@
     return el;
   }
 
-  function onDragMove(e) {
-    if (!dragState) return;
-    const dx = (e.clientX - dragState.startX) / view.scale;
-    const dy = (e.clientY - dragState.startY) / view.scale;
-    dragState.node.x = dragState.startNodeX + dx;
-    dragState.node.y = dragState.startNodeY + dy;
-    const el = canvas.querySelector(`[data-id="${dragState.node.id}"]`);
-    if (el) {
-      el.style.left = dragState.node.x + 'px';
-      el.style.top = dragState.node.y + 'px';
-    }
-    renderConnectors();
-  }
-  function onDragUp() {
-    if (dragState) {
-      const el = canvas.querySelector(`[data-id="${dragState.node.id}"]`);
-      if (el) el.classList.remove('dragging');
-    }
-    dragState = null;
-    window.removeEventListener('pointermove', onDragMove);
-    window.removeEventListener('pointerup', onDragUp);
-    persist();
-    renderLayerList();
+  function beginNodeDrag(e, node, el, captureEl) {
+    const startX = e.clientX, startY = e.clientY;
+    const startNodeX = node.x, startNodeY = node.y;
+    const hasConnections = currentConnectors().some(c => c.from === node.id || c.to === node.id);
+    let active = false;
+    let rafPending = false;
+    try { captureEl.setPointerCapture(e.pointerId); } catch (err) {}
+
+    const mv = (ev) => {
+      const sdx = ev.clientX - startX, sdy = ev.clientY - startY;
+      if (!active && Math.abs(sdx) < 3 && Math.abs(sdy) < 3) return;
+      if (!active) {
+        active = true;
+        el.classList.add('dragging');
+        document.body.classList.add('cv-dragging');
+      }
+      node.x = startNodeX + sdx / view.scale;
+      node.y = startNodeY + sdy / view.scale;
+      el.style.left = node.x + 'px';
+      el.style.top = node.y + 'px';
+      if (hasConnections && !rafPending) {
+        rafPending = true;
+        requestAnimationFrame(() => { rafPending = false; renderConnectors(); });
+      }
+    };
+    const up = () => {
+      captureEl.removeEventListener('pointermove', mv);
+      captureEl.removeEventListener('pointerup', up);
+      captureEl.removeEventListener('pointercancel', up);
+      try { captureEl.releasePointerCapture(e.pointerId); } catch (err) {}
+      if (active) {
+        el.classList.remove('dragging');
+        document.body.classList.remove('cv-dragging');
+        persist();
+        renderLayerList();
+        renderConnectors();
+      }
+    };
+    captureEl.addEventListener('pointermove', mv);
+    captureEl.addEventListener('pointerup', up);
+    captureEl.addEventListener('pointercancel', up);
   }
 
   function onResizeMove(e) {
@@ -2178,7 +2326,7 @@
           msg: `${wordCount(w.content)} words will be permanently deleted. This can't be undone.`,
           okLabel: 'Delete writing',
           onConfirm: () => {
-            state.writings = state.writings.filter(x => x.id !== w.id);
+            deleteWritingData(w);
             if (openWritingId === w.id) closeWriting();
             renderWritingList();
             persist();
@@ -2195,12 +2343,20 @@
   function openWriting(id) {
     const w = state.writings.find(x => x.id === id);
     if (!w) return;
+    if (!Array.isArray(w.images)) w.images = [];
     openWritingId = id;
     writingTitleEl.value = w.title || '';
     writingBodyEl.value = w.content || '';
     writingMetaEl.textContent = wordCount(w.content) + ' words';
     writingView.classList.add('open');
+    renderWritingGallery(w);
+    autoGrowWriting();
     setTimeout(() => (w.title ? writingBodyEl : writingTitleEl).focus(), 30);
+  }
+
+  function autoGrowWriting() {
+    writingBodyEl.style.height = 'auto';
+    writingBodyEl.style.height = Math.max(writingBodyEl.scrollHeight, window.innerHeight * 0.7) + 'px';
   }
 
   function closeWriting() {
@@ -2208,9 +2364,111 @@
     writingView.classList.remove('open');
   }
 
+  function deleteWritingData(w) {
+    (w.images || []).forEach(k => {
+      delete imageCache[k];
+      idbDelete('images', k).catch(() => {});
+    });
+    state.writings = state.writings.filter(x => x.id !== w.id);
+  }
+
+  function renderWritingGallery(w) {
+    const gal = $('cv-writing-gallery');
+    gal.innerHTML = '';
+    (w.images || []).forEach(key => {
+      const wrap = document.createElement('div');
+      wrap.className = 'cv-wimg';
+      const img = document.createElement('img');
+      const src = imageCache[key];
+      if (src) img.src = src;
+      else idbGet('images', key).then(v => { if (v) { imageCache[key] = v; img.src = v; } }).catch(() => {});
+      const del = document.createElement('button');
+      del.textContent = '\u2715';
+      del.title = 'Remove image';
+      del.onclick = () => {
+        showConfirm({
+          title: 'Remove this image?',
+          msg: 'It will be removed from this writing.',
+          okLabel: 'Remove',
+          onConfirm: () => {
+            w.images = w.images.filter(k => k !== key);
+            delete imageCache[key];
+            idbDelete('images', key).catch(() => {});
+            persist();
+            renderWritingGallery(w);
+          },
+        });
+      };
+      wrap.appendChild(img);
+      wrap.appendChild(del);
+      gal.appendChild(wrap);
+    });
+  }
+
+  function addWritingImages(files) {
+    const w = state.writings.find(x => x.id === openWritingId);
+    if (!w) return;
+    if (!Array.isArray(w.images)) w.images = [];
+    Array.from(files).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = async () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const s = maxDim / Math.max(width, height);
+            width = Math.round(width * s);
+            height = Math.round(height * s);
+          }
+          const c = document.createElement('canvas');
+          c.width = width; c.height = height;
+          c.getContext('2d').drawImage(img, 0, 0, width, height);
+          const dataUrl = c.toDataURL('image/jpeg', 0.87);
+          const key = uid('img');
+          try { await idbSet('images', key, dataUrl); } catch (e) { markStorageBroken(); }
+          imageCache[key] = dataUrl;
+          w.images.push(key);
+          persist();
+          renderWritingGallery(w);
+          flashSaved();
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('cv-writing-addimg').onclick = () => $('cv-writing-img-input').click();
+  $('cv-writing-img-input').onchange = () => {
+    const files = $('cv-writing-img-input').files;
+    if (files && files.length) addWritingImages(files);
+    $('cv-writing-img-input').value = '';
+  };
+
+  // paste images while writing -> add to the gallery
+  window.addEventListener('paste', (e) => {
+    if (!writingView.classList.contains('open')) return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length) {
+      e.preventDefault();
+      addWritingImages(files);
+    }
+  });
+
   $('cv-new-writing-btn').onclick = () => {
-    const w = { id: uid('w'), title: '', content: '', created: Date.now() };
+    const w = { id: uid('w'), title: '', content: '', images: [], created: Date.now() };
     state.writings.unshift(w);
+    $('cv-acc-writings').classList.add('open');
     renderWritingList();
     persist();
     openWriting(w.id);
@@ -2231,6 +2489,7 @@
     if (!w) return;
     w.content = writingBodyEl.value;
     writingMetaEl.textContent = wordCount(w.content) + ' words';
+    autoGrowWriting();
     persist();
   };
 
@@ -2242,7 +2501,7 @@
       msg: `${wordCount(w.content)} words will be permanently deleted. This can't be undone.`,
       okLabel: 'Delete writing',
       onConfirm: () => {
-        state.writings = state.writings.filter(x => x.id !== w.id);
+        deleteWritingData(w);
         closeWriting();
         renderWritingList();
         persist();
@@ -2254,11 +2513,13 @@
   const mapView = $('cv-map-view');
   const mapWrap = $('cv-map-wrap');
   const mapInner = $('cv-map-inner');
-  const mapBaseImg = $('cv-map-base');
+  const mapImagesEl = $('cv-map-images');
   const mapPaint = $('cv-map-paint');
   const mapLabelsEl = $('cv-map-labels');
   const labelToolbar = $('cv-label-toolbar');
   const mapZoomPct = $('cv-map-zoom-pct');
+  const imgSel = $('cv-map-imgsel');
+  const brushCursor = $('cv-brush-cursor');
 
   const MAP_W = 2400, MAP_H = 1600;
   let mapCtx = null;
@@ -2273,26 +2534,29 @@
   let paintSaveTimeout = null;
   let mapLoaded = false;
   let activeLabelId = null;
+  let selectedMapImg = null;
+  let mapImgDrag = null;
+  let mapImgResize = null;
+  let lastBrushPos = null;
 
-  const MAP_SWATCHES = ['#7A8471', '#5F7C8A', '#C9B88A', '#8B6F4E', '#3B342B', '#E8E2D4', '#C9613D'];
-  const swatchWrap = $('cv-map-swatches');
-  MAP_SWATCHES.forEach((c, i) => {
-    const s = document.createElement('span');
-    s.className = 'cv-map-swatch' + (i === 0 ? ' active' : '');
-    s.style.background = c;
-    s.title = c;
-    s.onclick = () => {
-      mapColor = c;
-      swatchWrap.querySelectorAll('.cv-map-swatch').forEach(el => el.classList.remove('active'));
-      s.classList.add('active');
-    };
-    swatchWrap.appendChild(s);
-  });
-  $('cv-map-custom-color').oninput = (e) => {
-    mapColor = e.target.value;
-    swatchWrap.querySelectorAll('.cv-map-swatch').forEach(el => el.classList.remove('active'));
+  $('cv-map-custom-color').oninput = (e) => { mapColor = e.target.value; };
+  $('cv-map-size').oninput = (e) => {
+    mapBrush = parseInt(e.target.value, 10);
+    updateBrushCursor();
   };
-  $('cv-map-size').oninput = (e) => { mapBrush = parseInt(e.target.value, 10); };
+
+  function clampMapView() {
+    const r = mapWrap.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    const minS = Math.min(r.width / MAP_W, r.height / MAP_H);
+    if (mapVw.scale < minS) mapVw.scale = minS;
+    if (mapVw.scale > 3) mapVw.scale = 3;
+    const w = MAP_W * mapVw.scale, h = MAP_H * mapVw.scale;
+    if (w <= r.width + 1) mapVw.x = (r.width - w) / 2;
+    else mapVw.x = Math.min(0, Math.max(r.width - w, mapVw.x));
+    if (h <= r.height + 1) mapVw.y = (r.height - h) / 2;
+    else mapVw.y = Math.min(0, Math.max(r.height - h, mapVw.y));
+  }
 
   function applyMapTransform() {
     mapInner.style.transform = `translate(${mapVw.x}px, ${mapVw.y}px) scale(${mapVw.scale})`;
@@ -2310,10 +2574,8 @@
   function fitMapToScreen() {
     const rect = mapWrap.getBoundingClientRect();
     if (!rect.width) return;
-    const scale = Math.min(rect.width / MAP_W, rect.height / MAP_H) * 0.92;
-    mapVw.scale = scale;
-    mapVw.x = (rect.width - MAP_W * scale) / 2;
-    mapVw.y = (rect.height - MAP_H * scale) / 2;
+    mapVw.scale = Math.min(rect.width / MAP_W, rect.height / MAP_H);
+    clampMapView();
     applyMapTransform();
   }
 
@@ -2326,6 +2588,9 @@
     mapWrap.id = 'cv-map-wrap';
     mapWrap.classList.add('tool-' + tool);
     hideLabelToolbar();
+    hideImgSel();
+    if (tool !== 'paint' && tool !== 'erase') brushCursor.style.display = 'none';
+    else updateBrushCursor();
   }
   document.querySelectorAll('.cv-map-tool[data-tool]').forEach(b => {
     b.onclick = () => setMapTool(b.dataset.tool);
@@ -2338,10 +2603,18 @@
     }
     if (!mapLoaded) {
       mapLoaded = true;
-      try {
-        const base = await idbGet('images', 'map-base');
-        if (base) { mapBaseImg.src = base; mapBaseImg.style.display = 'block'; }
-      } catch (e) {}
+      // legacy migration: single base image becomes the first map image
+      if (state.map.hasBase && (!state.map.images || !state.map.images.length)) {
+        state.map.images = [{ id: uid('mi'), key: 'map-base', x: 0, y: 0, w: MAP_W, h: MAP_H }];
+        state.map.hasBase = false;
+        persist();
+      }
+      if (!Array.isArray(state.map.images)) state.map.images = [];
+      // load all map image data into the cache
+      await Promise.all(state.map.images.map(mi =>
+        imageCache[mi.key] ? Promise.resolve() :
+        idbGet('images', mi.key).then(v => { if (v) imageCache[mi.key] = v; }).catch(() => {})
+      ));
       try {
         const paintData = await idbGet('images', 'map-paint');
         if (paintData && mapCtx) {
@@ -2351,6 +2624,7 @@
         }
       } catch (e) {}
     }
+    renderMapImages();
     renderMapLabels();
     setTimeout(fitMapToScreen, 30);
   }
@@ -2358,28 +2632,34 @@
   function resetMapForReload() {
     mapLoaded = false;
     undoStack = [];
-    mapBaseImg.src = '';
-    mapBaseImg.style.display = 'none';
+    hideImgSel();
+    mapImagesEl.innerHTML = '';
     if (mapCtx) mapCtx.clearRect(0, 0, MAP_W, MAP_H);
     if (mapView.classList.contains('open')) openMap();
   }
 
   function closeMap() {
     hideLabelToolbar();
+    hideImgSel();
+    brushCursor.style.display = 'none';
     mapView.classList.remove('open');
   }
 
   $('cv-open-map-btn').onclick = openMap;
   $('cv-map-back').onclick = closeMap;
 
-  /* --- pan & zoom --- */
+  window.addEventListener('resize', () => {
+    if (mapView.classList.contains('open')) { clampMapView(); applyMapTransform(); }
+  });
+
+  /* --- pan & zoom (clamped: can never scroll away from the map) --- */
   mapWrap.addEventListener('wheel', (e) => {
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
       const rect = mapWrap.getBoundingClientRect();
       const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
       const prev = mapVw.scale;
-      let ns = Math.min(3, Math.max(0.15, prev * (1 - e.deltaY * 0.0015)));
+      let ns = prev * (1 - e.deltaY * 0.0015);
       mapVw.x = cx - ((cx - mapVw.x) / prev) * ns;
       mapVw.y = cy - ((cy - mapVw.y) / prev) * ns;
       mapVw.scale = ns;
@@ -2387,22 +2667,44 @@
       mapVw.x -= e.deltaX;
       mapVw.y -= e.deltaY;
     }
+    clampMapView();
     applyMapTransform();
+    updateBrushCursor();
   }, { passive: false });
 
   function mapZoomBy(f) {
     const rect = mapWrap.getBoundingClientRect();
     const cx = rect.width / 2, cy = rect.height / 2;
     const prev = mapVw.scale;
-    let ns = Math.min(3, Math.max(0.15, prev * f));
+    let ns = prev * f;
     mapVw.x = cx - ((cx - mapVw.x) / prev) * ns;
     mapVw.y = cy - ((cy - mapVw.y) / prev) * ns;
     mapVw.scale = ns;
+    clampMapView();
     applyMapTransform();
+    updateBrushCursor();
   }
   $('cv-map-zoom-in').onclick = () => mapZoomBy(1.15);
   $('cv-map-zoom-out').onclick = () => mapZoomBy(0.87);
   $('cv-map-zoom-fit').onclick = fitMapToScreen;
+
+  /* --- brush size cursor --- */
+  function updateBrushCursor() {
+    if ((mapTool !== 'paint' && mapTool !== 'erase') || !lastBrushPos) return;
+    const d = Math.max(3, mapBrush * mapVw.scale);
+    brushCursor.style.width = d + 'px';
+    brushCursor.style.height = d + 'px';
+    brushCursor.style.left = lastBrushPos.x + 'px';
+    brushCursor.style.top = lastBrushPos.y + 'px';
+    brushCursor.className = mapTool;
+    brushCursor.style.display = 'block';
+  }
+  mapWrap.addEventListener('pointermove', (e) => {
+    const rect = mapWrap.getBoundingClientRect();
+    lastBrushPos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (mapTool === 'paint' || mapTool === 'erase') updateBrushCursor();
+  });
+  mapWrap.addEventListener('pointerleave', () => { brushCursor.style.display = 'none'; });
 
   /* --- painting --- */
   function pushUndo() {
@@ -2455,8 +2757,36 @@
     lastPt = pt;
   }
 
+  function hitTestMapImage(worldPt) {
+    const imgs = state.map.images || [];
+    for (let i = imgs.length - 1; i >= 0; i--) {
+      const m = imgs[i];
+      if (worldPt.x >= m.x && worldPt.x <= m.x + m.w && worldPt.y >= m.y && worldPt.y <= m.y + m.h) return m;
+    }
+    return null;
+  }
+
+  function snapMapImage(mi, nx, ny) {
+    const thr = 12;
+    let bx = nx, by = ny;
+    (state.map.images || []).forEach(o => {
+      if (o.id === mi.id) return;
+      const xEdges = [o.x, o.x + o.w];
+      const yEdges = [o.y, o.y + o.h];
+      xEdges.forEach(ex => {
+        if (Math.abs(nx - ex) < thr) bx = ex;
+        if (Math.abs(nx + mi.w - ex) < thr) bx = ex - mi.w;
+      });
+      yEdges.forEach(ey => {
+        if (Math.abs(ny - ey) < thr) by = ey;
+        if (Math.abs(ny + mi.h - ey) < thr) by = ey - mi.h;
+      });
+    });
+    return { x: bx, y: by };
+  }
+
   mapWrap.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('#cv-label-toolbar') || e.target.closest('#cv-map-zoom')) return;
+    if (e.target.closest('#cv-label-toolbar') || e.target.closest('#cv-map-zoom') || e.target.closest('#cv-map-imgsel')) return;
     if (e.target.classList && e.target.classList.contains('cv-map-label')) return; // labels handle their own
 
     if (mapTool === 'paint' || mapTool === 'erase') {
@@ -2479,18 +2809,43 @@
         if (el) { el.focus(); selectAllText(el); }
       }, 30);
     } else {
-      // move tool: pan
-      mapPan = { sx: e.clientX, sy: e.clientY, ox: mapVw.x, oy: mapVw.y };
-      mapWrap.classList.add('panning');
+      // move tool: drag an image if one is under the pointer, otherwise pan
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const hit = hitTestMapImage(p);
+      if (hit) {
+        mapImgDrag = { mi: hit, sx: e.clientX, sy: e.clientY, ox: hit.x, oy: hit.y, moved: false };
+        e.preventDefault();
+      } else {
+        hideImgSel();
+        mapPan = { sx: e.clientX, sy: e.clientY, ox: mapVw.x, oy: mapVw.y };
+        mapWrap.classList.add('panning');
+      }
     }
   });
 
   window.addEventListener('pointermove', (e) => {
     if (painting) {
       strokeTo(mapScreenToWorld(e.clientX, e.clientY));
+    } else if (mapImgDrag) {
+      const dx = (e.clientX - mapImgDrag.sx) / mapVw.scale;
+      const dy = (e.clientY - mapImgDrag.sy) / mapVw.scale;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) mapImgDrag.moved = true;
+      const snapped = snapMapImage(mapImgDrag.mi, mapImgDrag.ox + dx, mapImgDrag.oy + dy);
+      mapImgDrag.mi.x = snapped.x;
+      mapImgDrag.mi.y = snapped.y;
+      positionMapImage(mapImgDrag.mi);
+      if (selectedMapImg === mapImgDrag.mi.id) positionImgSel(mapImgDrag.mi);
+    } else if (mapImgResize) {
+      const dx = (e.clientX - mapImgResize.sx) / mapVw.scale;
+      const dy = (e.clientY - mapImgResize.sy) / mapVw.scale;
+      mapImgResize.mi.w = Math.max(60, mapImgResize.ow + dx);
+      mapImgResize.mi.h = Math.max(60, mapImgResize.oh + dy);
+      positionMapImage(mapImgResize.mi);
+      positionImgSel(mapImgResize.mi);
     } else if (mapPan) {
       mapVw.x = mapPan.ox + (e.clientX - mapPan.sx);
       mapVw.y = mapPan.oy + (e.clientY - mapPan.sy);
+      clampMapView();
       applyMapTransform();
     }
   });
@@ -2500,6 +2855,15 @@
       painting = false;
       lastPt = null;
       schedulePaintSave();
+    }
+    if (mapImgDrag) {
+      if (mapImgDrag.moved) persist();
+      showImgSel(mapImgDrag.mi);
+      mapImgDrag = null;
+    }
+    if (mapImgResize) {
+      persist();
+      mapImgResize = null;
     }
     if (mapPan) {
       mapPan = null;
@@ -2639,64 +3003,150 @@
     });
   };
 
-  /* --- base image --- */
-  $('cv-map-setbase').onclick = () => $('cv-map-base-input').click();
-  $('cv-map-base-input').onchange = () => {
-    const file = $('cv-map-base-input').files && $('cv-map-base-input').files[0];
-    $('cv-map-base-input').value = '';
-    if (file) setMapBase(file);
-  };
-
-  function setMapBase(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = async () => {
-        const maxDim = 2400;
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          const s = maxDim / Math.max(width, height);
-          width = Math.round(width * s);
-          height = Math.round(height * s);
-        }
-        const c = document.createElement('canvas');
-        c.width = width; c.height = height;
-        c.getContext('2d').drawImage(img, 0, 0, width, height);
-        const dataUrl = c.toDataURL('image/jpeg', 0.88);
-        try {
-          await idbSet('images', 'map-base', dataUrl);
-        } catch (e) { markStorageBroken(); }
-        state.map.hasBase = true;
-        persist();
-        mapBaseImg.src = dataUrl;
-        mapBaseImg.style.display = 'block';
-        flashSaved();
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
+  /* --- map images (multiple, snapping, deletable while drawings stay) --- */
+  function renderMapImages() {
+    mapImagesEl.innerHTML = '';
+    (state.map.images || []).forEach(mi => {
+      const div = document.createElement('div');
+      div.className = 'cv-map-img';
+      div.dataset.id = mi.id;
+      const img = document.createElement('img');
+      img.draggable = false;
+      const src = imageCache[mi.key];
+      if (src) img.src = src;
+      else idbGet('images', mi.key).then(v => { if (v) { imageCache[mi.key] = v; img.src = v; } }).catch(() => {});
+      div.appendChild(img);
+      mapImagesEl.appendChild(div);
+      positionMapImage(mi);
+    });
   }
 
-  // paste an image while the map is open -> offer to set as base
+  function positionMapImage(mi) {
+    const div = mapImagesEl.querySelector(`[data-id="${mi.id}"]`);
+    if (!div) return;
+    div.style.left = mi.x + 'px';
+    div.style.top = mi.y + 'px';
+    div.style.width = mi.w + 'px';
+    div.style.height = mi.h + 'px';
+  }
+
+  function positionImgSel(mi) {
+    imgSel.style.left = mi.x + 'px';
+    imgSel.style.top = mi.y + 'px';
+    imgSel.style.width = mi.w + 'px';
+    imgSel.style.height = mi.h + 'px';
+  }
+  function showImgSel(mi) {
+    selectedMapImg = mi.id;
+    positionImgSel(mi);
+    imgSel.classList.add('show');
+  }
+  function hideImgSel() {
+    selectedMapImg = null;
+    imgSel.classList.remove('show');
+  }
+  function selectedMi() {
+    return (state.map.images || []).find(m => m.id === selectedMapImg);
+  }
+
+  $('cv-map-imgresize').onpointerdown = (e) => {
+    const mi = selectedMi();
+    if (!mi) return;
+    e.stopPropagation();
+    e.preventDefault();
+    mapImgResize = { mi, sx: e.clientX, sy: e.clientY, ow: mi.w, oh: mi.h };
+  };
+
+  $('cv-map-imgdel').onclick = (e) => {
+    e.stopPropagation();
+    const mi = selectedMi();
+    if (!mi) return;
+    showConfirm({
+      title: 'Remove this map image?',
+      msg: 'The picture is removed. Everything you painted stays exactly where it is.',
+      okLabel: 'Remove image',
+      onConfirm: () => {
+        state.map.images = state.map.images.filter(m => m.id !== mi.id);
+        delete imageCache[mi.key];
+        idbDelete('images', mi.key).catch(() => {});
+        hideImgSel();
+        renderMapImages();
+        persist();
+      },
+    });
+  };
+
+  function addMapImages(files) {
+    const rect = mapWrap.getBoundingClientRect();
+    const center = mapScreenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    Array.from(files).forEach((file, idx) => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = async () => {
+          const maxDim = 1600;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            const s = maxDim / Math.max(width, height);
+            width = Math.round(width * s);
+            height = Math.round(height * s);
+          }
+          const c = document.createElement('canvas');
+          c.width = width; c.height = height;
+          c.getContext('2d').drawImage(img, 0, 0, width, height);
+          const dataUrl = c.toDataURL('image/jpeg', 0.88);
+          const key = uid('img');
+          try { await idbSet('images', key, dataUrl); } catch (e) { markStorageBroken(); }
+          imageCache[key] = dataUrl;
+          // placed size: cap at 900 world px on the long side
+          const cap = 900;
+          let pw = width, ph = height;
+          if (pw > cap || ph > cap) {
+            const s = cap / Math.max(pw, ph);
+            pw = Math.round(pw * s); ph = Math.round(ph * s);
+          }
+          if (!Array.isArray(state.map.images)) state.map.images = [];
+          state.map.images.push({
+            id: uid('mi'), key,
+            x: center.x - pw / 2 + idx * 40,
+            y: center.y - ph / 2 + idx * 40,
+            w: pw, h: ph,
+          });
+          persist();
+          renderMapImages();
+          flashSaved();
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('cv-map-addimg').onclick = () => $('cv-map-img-input').click();
+  $('cv-map-img-input').onchange = () => {
+    const files = $('cv-map-img-input').files;
+    if (files && files.length) addMapImages(files);
+    $('cv-map-img-input').value = '';
+  };
+
+  // paste images while the map is open -> add them to the map
   window.addEventListener('paste', (e) => {
     if (!mapView.classList.contains('open')) return;
     const active = document.activeElement;
     if (active && active.classList && active.classList.contains('cv-map-label')) return;
     const items = e.clipboardData && e.clipboardData.items;
     if (!items) return;
+    const files = [];
     for (const item of items) {
       if (item.type.startsWith('image/')) {
-        const file = item.getAsFile();
-        if (!file) return;
-        e.preventDefault();
-        showConfirm({
-          title: 'Use this image as the map base?',
-          msg: state.map.hasBase ? 'This replaces your current base image. Paint and labels stay.' : 'It becomes the background you paint and label on top of.',
-          okLabel: 'Set as base',
-          onConfirm: () => setMapBase(file),
-        });
-        return;
+        const f = item.getAsFile();
+        if (f) files.push(f);
       }
+    }
+    if (files.length) {
+      e.preventDefault();
+      addMapImages(files);
     }
   });
 
