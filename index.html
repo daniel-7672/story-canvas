@@ -73,7 +73,8 @@
     flex-direction: column;
     z-index: 5;
     transition: width 0.18s ease, padding 0.18s ease, opacity 0.18s ease;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
   #cv-sidebar.collapsed { width: 0; padding: 18px 0; border-right: none; opacity: 0; }
 
@@ -450,6 +451,55 @@
   }
   .cv-connector-label-bg { fill: var(--bg); }
 
+  .cv-conn-del {
+    position: absolute;
+    width: 16px; height: 16px;
+    transform: translate(-50%, -50%);
+    background: var(--surface);
+    border: 1px solid var(--wax-dim);
+    color: var(--wax);
+    border-radius: 50%;
+    font-size: 9px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 40;
+    opacity: 0.45;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    user-select: none;
+  }
+  .cv-conn-del:hover { opacity: 1; transform: translate(-50%, -50%) scale(1.25); }
+
+  /* Loose title / caption strips for images (no box, just text) */
+  .cv-loose-strip {
+    display: flex; align-items: flex-start; gap: 4px;
+    padding: 1px 2px;
+  }
+  .cv-loose-strip.pos-above { margin-bottom: 4px; }
+  .cv-loose-strip.pos-below { margin-top: 4px; }
+  .cv-img-title-input {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px;
+    background: transparent; border: none; color: var(--text);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    width: 100%; min-width: 0; cursor: text;
+  }
+  .cv-img-title-input::placeholder { color: var(--text-faint); font-weight: 500; }
+  .cv-img-caption-input {
+    font-family: 'Inter', sans-serif; font-size: 12.5px; line-height: 1.5;
+    background: transparent; border: none; color: var(--text-dim);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+    width: 100%; min-width: 0; resize: none; cursor: text; min-height: 18px;
+  }
+  .cv-img-caption-input::placeholder { color: var(--text-faint); font-style: italic; }
+  .cv-loose-controls {
+    display: flex; gap: 2px; flex-shrink: 0;
+    opacity: 0; transition: opacity 0.12s ease;
+  }
+  .cv-loose-strip:hover .cv-loose-controls { opacity: 1; }
+  .cv-loose-controls button {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 3px; line-height: 1;
+  }
+  .cv-loose-controls button:hover { color: var(--wax); }
+
   #cv-empty-hint {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     text-align: center; color: var(--text-faint); pointer-events: none; z-index: 1;
@@ -469,6 +519,180 @@
   @media (max-width: 720px) {
     #cv-sidebar { position: absolute; height: 100%; background: var(--bg); }
     #cv-hint { display: none; }
+  }
+
+  /* ---------- SIDEBAR SECTIONS (Writings / Map) ---------- */
+  .cv-section-head {
+    padding: 12px 16px 6px 16px; margin-top: 6px; border-top: 1px dashed var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cv-section-head .eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .cv-section-add {
+    background: none; border: 1px solid var(--border-soft); color: var(--text-faint);
+    width: 18px; height: 18px; border-radius: 4px; cursor: pointer; font-size: 12px;
+    line-height: 1; display: flex; align-items: center; justify-content: center;
+  }
+  .cv-section-add:hover { color: var(--wax); border-color: var(--wax-dim); }
+
+  #cv-writinglist { max-height: 160px; overflow-y: auto; padding: 0 8px; display: flex; flex-direction: column; gap: 2px; }
+  .cv-writing-item {
+    display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 4px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .cv-writing-item:hover { background: var(--surface); }
+  .cv-writing-item .cv-writing-name {
+    font-family: 'Fraunces', serif; font-size: 13px; font-weight: 500; color: var(--text-dim);
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cv-writing-item:hover .cv-writing-name { color: var(--text); }
+  .cv-writing-del {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-size: 11px; padding: 2px 4px; line-height: 1; opacity: 0; transition: opacity 0.15s, color 0.15s;
+  }
+  .cv-writing-item:hover .cv-writing-del { opacity: 1; }
+  .cv-writing-del:hover { color: var(--wax); }
+
+  #cv-open-map-btn {
+    margin: 6px 8px 0 8px;
+    font-family: 'Fraunces', serif; font-size: 13.5px; font-weight: 500;
+    color: var(--text-dim); background: transparent; border: 1px solid var(--border-soft);
+    text-align: left; padding: 9px 12px; border-radius: 4px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s;
+  }
+  #cv-open-map-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
+
+  /* ---------- WRITING VIEW ---------- */
+  #cv-writing-view {
+    position: fixed; inset: 0; background: var(--bg); z-index: 60;
+    display: none; flex-direction: column;
+  }
+  #cv-writing-view.open { display: flex; }
+  #cv-writing-topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+  .cv-back-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-soft);
+    padding: 7px 12px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .cv-back-btn:hover { color: var(--text); border-color: var(--border); }
+  #cv-writing-title {
+    font-family: 'Fraunces', serif; font-weight: 600; font-size: 20px;
+    background: transparent; border: none; color: var(--text); flex: 1; min-width: 0;
+  }
+  #cv-writing-title::placeholder { color: var(--text-faint); }
+  #cv-writing-meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint);
+    white-space: nowrap;
+  }
+  #cv-writing-delete {
+    background: none; border: none; color: var(--text-faint); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 4px 8px;
+  }
+  #cv-writing-delete:hover { color: var(--wax); }
+  #cv-writing-scroll { flex: 1; overflow-y: auto; }
+  #cv-writing-body {
+    display: block;
+    width: 100%; max-width: 760px; margin: 0 auto;
+    padding: 36px 28px 120px 28px;
+    background: transparent; border: none; color: var(--text);
+    font-family: 'Inter', sans-serif; font-size: 16px; line-height: 1.75;
+    resize: none; min-height: 100%;
+  }
+  #cv-writing-body::placeholder { color: var(--text-faint); font-style: italic; }
+
+  /* ---------- WORLD MAP VIEW ---------- */
+  #cv-map-view {
+    position: fixed; inset: 0; background: var(--bg); z-index: 60;
+    display: none; flex-direction: column;
+  }
+  #cv-map-view.open { display: flex; }
+  #cv-map-topbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--border-soft); flex-shrink: 0;
+  }
+  #cv-map-topbar .spacer { flex: 1; }
+  .cv-map-tool {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    background: var(--surface); color: var(--text-dim); border: 1px solid var(--border-soft);
+    padding: 7px 11px; border-radius: 5px; cursor: pointer; white-space: nowrap;
+  }
+  .cv-map-tool:hover { color: var(--text); border-color: var(--border); }
+  .cv-map-tool.active { background: var(--wax-dim); color: #1C1A17; border-color: var(--wax-dim); font-weight: 600; }
+  .cv-map-swatch {
+    width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent; flex-shrink: 0;
+  }
+  .cv-map-swatch.active { border-color: var(--text); }
+  #cv-map-custom-color { width: 26px; height: 26px; border: none; background: none; cursor: pointer; padding: 0; }
+  #cv-map-size {
+    width: 90px; accent-color: var(--wax-dim);
+  }
+  #cv-map-wrap {
+    flex: 1; position: relative; overflow: hidden; cursor: grab;
+  }
+  #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: crosshair; }
+  #cv-map-wrap.tool-label { cursor: text; }
+  #cv-map-wrap.panning { cursor: grabbing; }
+  #cv-map-inner {
+    position: absolute; top: 0; left: 0;
+    width: 2400px; height: 1600px;
+    transform-origin: 0 0;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(201,97,61,0.04), transparent 60%),
+      radial-gradient(circle at 1px 1px, var(--bg-dot) 1.2px, transparent 0),
+      #211E1A;
+    background-size: auto, 26px 26px, auto;
+    box-shadow: 0 0 0 1px var(--border-soft), 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #cv-map-base {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    object-fit: contain; pointer-events: none; user-select: none;
+  }
+  #cv-map-paint {
+    position: absolute; top: 0; left: 0; width: 2400px; height: 1600px;
+  }
+  #cv-map-labels { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .cv-map-label {
+    position: absolute; pointer-events: auto;
+    font-family: 'Fraunces', serif; font-weight: 600;
+    color: var(--text); white-space: nowrap;
+    cursor: grab; outline: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    padding: 2px 6px; border-radius: 3px;
+  }
+  .cv-map-label:focus { background: rgba(28,26,23,0.75); box-shadow: 0 0 0 1px var(--wax-dim); cursor: text; }
+  #cv-map-wrap.tool-paint .cv-map-label, #cv-map-wrap.tool-erase .cv-map-label { pointer-events: none; }
+  #cv-label-toolbar {
+    position: absolute; display: none; gap: 4px; align-items: center;
+    background: var(--surface-hi); border: 1px solid var(--border);
+    border-radius: 5px; padding: 4px 6px; z-index: 20;
+  }
+  #cv-label-toolbar.show { display: flex; }
+  #cv-label-toolbar button {
+    background: none; border: none; color: var(--text-dim); cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 6px; border-radius: 3px;
+  }
+  #cv-label-toolbar button:hover { background: var(--surface); color: var(--text); }
+  #cv-label-toolbar .lbl-color {
+    width: 14px; height: 14px; border-radius: 50%; cursor: pointer; border: 1px solid var(--border);
+  }
+  #cv-map-zoom {
+    position: absolute; bottom: 14px; left: 14px; z-index: 10;
+    display: flex; align-items: center; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 6px;
+    padding: 4px;
+  }
+  #cv-map-hint {
+    position: absolute; bottom: 14px; right: 14px; z-index: 10;
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint);
+    background: var(--surface); border: 1px solid var(--border-soft); padding: 7px 11px; border-radius: 6px;
+    max-width: 260px; line-height: 1.6;
   }
 
   /* ---------- CONFIRM DIALOG ---------- */
@@ -548,6 +772,17 @@
     <div class="cv-boardlist" id="cv-boardlist"></div>
     <button id="cv-new-board-btn">+ new board</button>
 
+    <div class="cv-section-head">
+      <span class="eyebrow">Writings</span>
+      <button class="cv-section-add" id="cv-new-writing-btn" title="New writing">+</button>
+    </div>
+    <div id="cv-writinglist"></div>
+
+    <div class="cv-section-head">
+      <span class="eyebrow">World</span>
+    </div>
+    <button id="cv-open-map-btn">&#128506; World Map</button>
+
     <div id="cv-layers-head">
       <span class="eyebrow">Cards on this board</span>
     </div>
@@ -591,6 +826,58 @@
 
     <div id="cv-hint">Scroll to pan &middot; Ctrl/Cmd+scroll or pinch to zoom &middot; Drag cards to move &middot; Hover a picture for its controls &middot; Drag the red dot to connect</div>
     <div id="cv-save-indicator">saved</div>
+  </div>
+
+  <div id="cv-writing-view">
+    <div id="cv-writing-topbar">
+      <button class="cv-back-btn" id="cv-writing-back">&larr; Back</button>
+      <input id="cv-writing-title" placeholder="Untitled writing">
+      <span id="cv-writing-meta">0 words</span>
+      <button id="cv-writing-delete" title="Delete this writing">delete</button>
+    </div>
+    <div id="cv-writing-scroll">
+      <textarea id="cv-writing-body" placeholder="Write freely. Everything saves as you type."></textarea>
+    </div>
+  </div>
+
+  <div id="cv-map-view">
+    <div id="cv-map-topbar">
+      <button class="cv-back-btn" id="cv-map-back">&larr; Back</button>
+      <button class="cv-map-tool active" data-tool="move" title="Pan the map / drag labels">&#10021; Move</button>
+      <button class="cv-map-tool" data-tool="paint" title="Paint on the map">&#128396; Paint</button>
+      <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
+      <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
+      <span id="cv-map-swatches"></span>
+      <input type="color" id="cv-map-custom-color" value="#C9613D" title="Custom color">
+      <input type="range" id="cv-map-size" min="2" max="60" value="10" title="Brush size">
+      <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
+      <span class="spacer"></span>
+      <button class="cv-map-tool" id="cv-map-setbase">Set base image</button>
+      <input type="file" id="cv-map-base-input" accept="image/*" style="display:none;">
+    </div>
+    <div id="cv-map-wrap">
+      <div id="cv-map-inner">
+        <img id="cv-map-base" style="display:none;" draggable="false">
+        <canvas id="cv-map-paint" width="2400" height="1600"></canvas>
+        <div id="cv-map-labels"></div>
+      </div>
+      <div id="cv-label-toolbar">
+        <button id="cv-lbl-smaller" title="Smaller">A-</button>
+        <button id="cv-lbl-bigger" title="Bigger">A+</button>
+        <span class="lbl-color" data-c="#E8E2D4" style="background:#E8E2D4;"></span>
+        <span class="lbl-color" data-c="#2B2620" style="background:#2B2620;"></span>
+        <span class="lbl-color" data-c="#D4744E" style="background:#D4744E;"></span>
+        <span class="lbl-color" data-c="#9AA88F" style="background:#9AA88F;"></span>
+        <button id="cv-lbl-delete" title="Delete label">&#x2715;</button>
+      </div>
+      <div id="cv-map-zoom">
+        <button class="cv-zoom-btn" id="cv-map-zoom-out">&minus;</button>
+        <span id="cv-map-zoom-pct">100%</span>
+        <button class="cv-zoom-btn" id="cv-map-zoom-in">+</button>
+        <button class="cv-zoom-btn" id="cv-map-zoom-fit" title="Fit map to screen">&#8982;</button>
+      </div>
+      <div id="cv-map-hint">Move: drag to pan, drag labels &middot; Paint/Erase: draw on the map &middot; Label: click to add a place name &middot; Click a label to edit it</div>
+    </div>
   </div>
 
   <div id="cv-confirm-overlay">
@@ -669,6 +956,15 @@
 
   function currentNodes() { return state.nodesByBoard[state.activeBoard]; }
   function currentConnectors() { return state.connectorsByBoard[state.activeBoard]; }
+
+  function connectionExists(a, b) {
+    return currentConnectors().some(c => (c.from === a && c.to === b) || (c.from === b && c.to === a));
+  }
+  function addConnection(a, b) {
+    if (a === b || connectionExists(a, b)) return false;
+    currentConnectors().push({ id: uid('cn'), from: a, to: b, label: '' });
+    return true;
+  }
 
   function flashSaved() {
     saveIndicator.classList.add('show');
@@ -762,8 +1058,24 @@
       console.error('load failed', e);
       markStorageBroken();
     }
+    // upgrade older saves with new sections
+    if (!Array.isArray(state.writings)) state.writings = [];
+    if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
+    if (!Array.isArray(state.map.labels)) state.map.labels = [];
+    // migrate old combined image labels to separate title/caption
+    Object.values(state.nodesByBoard).forEach(nodes => {
+      (nodes || []).forEach(n => {
+        if (n.type === 'image' && n.showLabel) {
+          n.showTitle = true;
+          n.titlePos = n.labelPos || 'above';
+          if (n.body && n.body.trim()) { n.showCaption = true; n.captionPos = 'below'; }
+          n.showLabel = false;
+        }
+      });
+    });
     nameEl.value = state.projectName || 'Untitled Story';
     renderBoardList();
+    renderWritingList();
     renderAll();
   }
 
@@ -964,14 +1276,21 @@
   };
 
   /* ---------------- BACKUP ---------------- */
-  $('cv-export-btn').onclick = () => {
+  $('cv-export-btn').onclick = async () => {
     const images = {};
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
         if (n.imageKey && imageCache[n.imageKey]) images[n.imageKey] = imageCache[n.imageKey];
       });
     });
-    const payload = { app: 'story-canvas', version: 1, exportedAt: new Date().toISOString(), state, images };
+    // include the world map layers, reading from the database if not yet loaded
+    for (const key of ['map-base', 'map-paint']) {
+      try {
+        const v = imageCache[key] || await idbGet('images', key);
+        if (v) images[key] = v;
+      } catch (e) {}
+    }
+    const payload = { app: 'story-canvas', version: 2, exportedAt: new Date().toISOString(), state, images };
     const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -1001,10 +1320,13 @@
       }
       showConfirm({
         title: 'Import this backup?',
-        msg: 'This replaces everything currently on your boards with the backup\u2019s contents.',
+        msg: 'This replaces everything currently on your boards, writings, and map with the backup\u2019s contents.',
         okLabel: 'Import & replace',
         onConfirm: async () => {
           state = payload.state;
+          if (!Array.isArray(state.writings)) state.writings = [];
+          if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
+          if (!Array.isArray(state.map.labels)) state.map.labels = [];
           const images = payload.images || {};
           const writes = Object.entries(images).map(([k, v]) => {
             imageCache[k] = v;
@@ -1014,6 +1336,8 @@
           selectedNode = null;
           nameEl.value = state.projectName || 'Untitled Story';
           renderBoardList();
+          renderWritingList();
+          resetMapForReload();
           renderAll();
           persist();
         },
@@ -1104,6 +1428,7 @@
   });
 
   window.addEventListener('paste', (e) => {
+    if (document.querySelector('#cv-writing-view.open') || document.querySelector('#cv-map-view.open')) return;
     const active = document.activeElement;
     const withinCard = active && active.closest && active.closest('.cv-node');
     if (withinCard) return; // handled by the card's own onpaste
@@ -1201,8 +1526,11 @@
     el.style.width = node.w + 'px';
     el.style.height = (node.h || 200) + 'px';
 
-    if (node.showLabel && node.labelPos === 'above') {
-      el.appendChild(renderLabelStrip(node, 'above'));
+    if (node.showTitle && node.titlePos === 'above') {
+      el.appendChild(renderLooseStrip(node, 'title', 'above'));
+    }
+    if (node.showCaption && node.captionPos === 'above') {
+      el.appendChild(renderLooseStrip(node, 'caption', 'above'));
     }
 
     const imgWrap = document.createElement('div');
@@ -1260,13 +1588,26 @@
 
     const labelBtn = document.createElement('button');
     labelBtn.className = 'cv-node-float-btn';
-    labelBtn.title = node.showLabel ? 'Remove title/caption' : 'Add title/caption';
+    labelBtn.title = node.showTitle ? 'Remove title' : 'Add title';
     labelBtn.textContent = 'T';
     labelBtn.onpointerdown = (e) => e.stopPropagation();
     labelBtn.onclick = (e) => {
       e.stopPropagation();
-      node.showLabel = !node.showLabel;
-      if (node.showLabel && !node.labelPos) node.labelPos = 'below';
+      node.showTitle = !node.showTitle;
+      if (node.showTitle && !node.titlePos) node.titlePos = 'above';
+      persist();
+      refreshNodeInPlace(node.id);
+    };
+
+    const captionBtn = document.createElement('button');
+    captionBtn.className = 'cv-node-float-btn';
+    captionBtn.title = node.showCaption ? 'Remove caption' : 'Add caption';
+    captionBtn.textContent = '\u275D';
+    captionBtn.onpointerdown = (e) => e.stopPropagation();
+    captionBtn.onclick = (e) => {
+      e.stopPropagation();
+      node.showCaption = !node.showCaption;
+      if (node.showCaption && !node.captionPos) node.captionPos = 'below';
       persist();
       refreshNodeInPlace(node.id);
     };
@@ -1306,6 +1647,7 @@
     delBtnFloat.onclick = (e) => { e.stopPropagation(); confirmDeleteNode(node.id); };
 
     floatControls.appendChild(labelBtn);
+    floatControls.appendChild(captionBtn);
     floatControls.appendChild(replaceBtn);
     floatControls.appendChild(connectHandle);
     floatControls.appendChild(delBtnFloat);
@@ -1363,8 +1705,11 @@
 
     el.appendChild(imgWrap);
 
-    if (node.showLabel && node.labelPos === 'below') {
-      el.appendChild(renderLabelStrip(node, 'below'));
+    if (node.showTitle && node.titlePos === 'below') {
+      el.appendChild(renderLooseStrip(node, 'title', 'below'));
+    }
+    if (node.showCaption && node.captionPos === 'below') {
+      el.appendChild(renderLooseStrip(node, 'caption', 'below'));
     }
 
     el.onclick = (e) => {
@@ -1374,7 +1719,7 @@
           connectFrom = node.id;
           el.classList.add('selected');
         } else if (connectFrom !== node.id) {
-          currentConnectors().push({ id: uid('cn'), from: connectFrom, to: node.id, label: '' });
+          addConnection(connectFrom, node.id);
           connectMode = false;
           connectFrom = null;
           wrap.classList.remove('connecting');
@@ -1391,61 +1736,60 @@
     return el;
   }
 
-  function renderLabelStrip(node, pos) {
+  function renderLooseStrip(node, kind, pos) {
     const strip = document.createElement('div');
-    strip.className = 'cv-node-label-strip pos-' + pos;
+    strip.className = 'cv-loose-strip pos-' + pos;
     strip.onpointerdown = (e) => e.stopPropagation();
 
-    const titleInput = document.createElement('input');
-    titleInput.className = 'cv-node-label-title';
-    titleInput.placeholder = 'Title';
-    titleInput.value = node.title || '';
-    titleInput.oninput = () => { node.title = titleInput.value; persist(); renderLayerList(); };
+    let field;
+    if (kind === 'title') {
+      field = document.createElement('input');
+      field.className = 'cv-img-title-input';
+      field.placeholder = 'Title';
+      field.value = node.title || '';
+      field.oninput = () => { node.title = field.value; persist(); renderLayerList(); };
+    } else {
+      field = document.createElement('textarea');
+      field.className = 'cv-img-caption-input';
+      field.placeholder = 'Caption...';
+      field.value = node.body || '';
+      field.rows = 1;
+      field.oninput = () => {
+        node.body = field.value;
+        field.style.height = 'auto';
+        field.style.height = field.scrollHeight + 'px';
+        persist();
+      };
+      requestAnimationFrame(() => { field.style.height = 'auto'; field.style.height = field.scrollHeight + 'px'; });
+    }
 
-    const caption = document.createElement('textarea');
-    caption.className = 'cv-node-label-caption';
-    caption.placeholder = 'Caption or note...';
-    caption.value = node.body || '';
-    caption.rows = 1;
-    caption.oninput = () => {
-      node.body = caption.value;
-      caption.style.height = 'auto';
-      caption.style.height = caption.scrollHeight + 'px';
-      persist();
-    };
-
-    const controlsRow = document.createElement('div');
-    controlsRow.style.display = 'flex';
-    controlsRow.style.justifyContent = 'space-between';
-    controlsRow.style.alignItems = 'center';
+    const controls = document.createElement('div');
+    controls.className = 'cv-loose-controls';
 
     const flipBtn = document.createElement('button');
-    flipBtn.className = 'cv-node-label-remove';
-    flipBtn.textContent = pos === 'above' ? 'move below \u2193' : 'move above \u2191';
+    flipBtn.textContent = pos === 'above' ? '\u2193' : '\u2191';
+    flipBtn.title = pos === 'above' ? 'Move below the image' : 'Move above the image';
     flipBtn.onclick = () => {
-      node.labelPos = pos === 'above' ? 'below' : 'above';
+      if (kind === 'title') node.titlePos = pos === 'above' ? 'below' : 'above';
+      else node.captionPos = pos === 'above' ? 'below' : 'above';
       persist();
       refreshNodeInPlace(node.id);
     };
 
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'cv-node-label-remove';
-    removeBtn.textContent = 'remove label';
+    removeBtn.textContent = '\u2715';
+    removeBtn.title = kind === 'title' ? 'Remove title' : 'Remove caption';
     removeBtn.onclick = () => {
-      node.showLabel = false;
+      if (kind === 'title') node.showTitle = false;
+      else node.showCaption = false;
       persist();
       refreshNodeInPlace(node.id);
     };
 
-    controlsRow.appendChild(flipBtn);
-    controlsRow.appendChild(removeBtn);
-
-    strip.appendChild(titleInput);
-    strip.appendChild(caption);
-    strip.appendChild(controlsRow);
-
-    requestAnimationFrame(() => { caption.style.height = 'auto'; caption.style.height = caption.scrollHeight + 'px'; });
-
+    controls.appendChild(flipBtn);
+    controls.appendChild(removeBtn);
+    strip.appendChild(field);
+    strip.appendChild(controls);
     return strip;
   }
 
@@ -1532,7 +1876,7 @@
           connectFrom = node.id;
           el.classList.add('selected');
         } else if (connectFrom !== node.id) {
-          currentConnectors().push({ id: uid('cn'), from: connectFrom, to: node.id, label: '' });
+          addConnection(connectFrom, node.id);
           connectMode = false;
           connectFrom = null;
           wrap.classList.remove('connecting');
@@ -1613,7 +1957,7 @@
       const targetEl = document.elementFromPoint(e.clientX, e.clientY);
       const nodeEl = targetEl ? targetEl.closest('.cv-node') : null;
       if (nodeEl && nodeEl.dataset.id !== tempConnector.fromNode.id) {
-        currentConnectors().push({ id: uid('cn'), from: tempConnector.fromNode.id, to: nodeEl.dataset.id, label: '' });
+        addConnection(tempConnector.fromNode.id, nodeEl.dataset.id);
         persist();
       }
     }
@@ -1638,6 +1982,7 @@
 
   function renderConnectors() {
     svg.innerHTML = '';
+    canvas.querySelectorAll('.cv-conn-del').forEach(el => el.remove());
     const nodes = currentNodes();
     const byId = {};
     nodes.forEach(n => byId[n.id] = n);
@@ -1649,23 +1994,34 @@
       const p2 = { x: to.x, y: to.y + 24 };
       const d = wobblyPath(p1.x, p1.y, p2.x, p2.y);
 
-      const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      hit.setAttribute('d', d);
-      hit.setAttribute('class', 'cv-connector-hit');
-      hit.style.pointerEvents = 'stroke';
-      hit.onclick = (e) => {
-        e.stopPropagation();
-        state.connectorsByBoard[state.activeBoard] = currentConnectors().filter(c => c.id !== conn.id);
-        renderAll();
-        persist();
-      };
-      svg.appendChild(hit);
-
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       path.setAttribute('d', d);
       path.setAttribute('class', 'cv-connector-path');
       path.style.pointerEvents = 'none';
       svg.appendChild(path);
+
+      // midpoint of the cubic bezier at t=0.5: (P0 + 3*P1 + 3*P2 + P3) / 8
+      const dx = (p2.x - p1.x) * 0.35;
+      const c1 = { x: p1.x + dx, y: p1.y };
+      const c2 = { x: p2.x - dx, y: p2.y };
+      const mid = {
+        x: (p1.x + 3 * c1.x + 3 * c2.x + p2.x) / 8,
+        y: (p1.y + 3 * c1.y + 3 * c2.y + p2.y) / 8,
+      };
+      const del = document.createElement('div');
+      del.className = 'cv-conn-del';
+      del.title = 'Remove this connection';
+      del.textContent = '\u2715';
+      del.style.left = mid.x + 'px';
+      del.style.top = mid.y + 'px';
+      del.onpointerdown = (e) => e.stopPropagation();
+      del.onclick = (e) => {
+        e.stopPropagation();
+        state.connectorsByBoard[state.activeBoard] = currentConnectors().filter(c => c.id !== conn.id);
+        renderAll();
+        persist();
+      };
+      canvas.appendChild(del);
     });
 
     if (tempConnector && tempConnector.x2 !== null) {
@@ -1783,6 +2139,574 @@
     oldEl.replaceWith(newEl);
     renderConnectors();
   }
+
+  /* ================= WRITINGS ================= */
+  const writingView = $('cv-writing-view');
+  const writingTitleEl = $('cv-writing-title');
+  const writingBodyEl = $('cv-writing-body');
+  const writingMetaEl = $('cv-writing-meta');
+  const writinglistEl = $('cv-writinglist');
+  let openWritingId = null;
+
+  function wordCount(text) {
+    return (text || '').trim().split(/\s+/).filter(Boolean).length;
+  }
+
+  function renderWritingList() {
+    writinglistEl.innerHTML = '';
+    if (!state.writings.length) {
+      const empty = document.createElement('div');
+      empty.className = 'cv-layer-empty';
+      empty.textContent = 'Nothing written yet.';
+      writinglistEl.appendChild(empty);
+      return;
+    }
+    state.writings.forEach(w => {
+      const item = document.createElement('div');
+      item.className = 'cv-writing-item';
+      const name = document.createElement('span');
+      name.className = 'cv-writing-name';
+      name.textContent = w.title && w.title.trim() ? w.title.trim() : '(untitled)';
+      const del = document.createElement('button');
+      del.className = 'cv-writing-del';
+      del.textContent = '\u2715';
+      del.title = 'Delete';
+      del.onclick = (e) => {
+        e.stopPropagation();
+        showConfirm({
+          title: `Delete "${name.textContent}"?`,
+          msg: `${wordCount(w.content)} words will be permanently deleted. This can't be undone.`,
+          okLabel: 'Delete writing',
+          onConfirm: () => {
+            state.writings = state.writings.filter(x => x.id !== w.id);
+            if (openWritingId === w.id) closeWriting();
+            renderWritingList();
+            persist();
+          },
+        });
+      };
+      item.appendChild(name);
+      item.appendChild(del);
+      item.onclick = () => openWriting(w.id);
+      writinglistEl.appendChild(item);
+    });
+  }
+
+  function openWriting(id) {
+    const w = state.writings.find(x => x.id === id);
+    if (!w) return;
+    openWritingId = id;
+    writingTitleEl.value = w.title || '';
+    writingBodyEl.value = w.content || '';
+    writingMetaEl.textContent = wordCount(w.content) + ' words';
+    writingView.classList.add('open');
+    setTimeout(() => (w.title ? writingBodyEl : writingTitleEl).focus(), 30);
+  }
+
+  function closeWriting() {
+    openWritingId = null;
+    writingView.classList.remove('open');
+  }
+
+  $('cv-new-writing-btn').onclick = () => {
+    const w = { id: uid('w'), title: '', content: '', created: Date.now() };
+    state.writings.unshift(w);
+    renderWritingList();
+    persist();
+    openWriting(w.id);
+  };
+
+  $('cv-writing-back').onclick = closeWriting;
+
+  writingTitleEl.oninput = () => {
+    const w = state.writings.find(x => x.id === openWritingId);
+    if (!w) return;
+    w.title = writingTitleEl.value;
+    renderWritingList();
+    persist();
+  };
+
+  writingBodyEl.oninput = () => {
+    const w = state.writings.find(x => x.id === openWritingId);
+    if (!w) return;
+    w.content = writingBodyEl.value;
+    writingMetaEl.textContent = wordCount(w.content) + ' words';
+    persist();
+  };
+
+  $('cv-writing-delete').onclick = () => {
+    const w = state.writings.find(x => x.id === openWritingId);
+    if (!w) return;
+    showConfirm({
+      title: `Delete "${w.title || '(untitled)'}"?`,
+      msg: `${wordCount(w.content)} words will be permanently deleted. This can't be undone.`,
+      okLabel: 'Delete writing',
+      onConfirm: () => {
+        state.writings = state.writings.filter(x => x.id !== w.id);
+        closeWriting();
+        renderWritingList();
+        persist();
+      },
+    });
+  };
+
+  /* ================= WORLD MAP ================= */
+  const mapView = $('cv-map-view');
+  const mapWrap = $('cv-map-wrap');
+  const mapInner = $('cv-map-inner');
+  const mapBaseImg = $('cv-map-base');
+  const mapPaint = $('cv-map-paint');
+  const mapLabelsEl = $('cv-map-labels');
+  const labelToolbar = $('cv-label-toolbar');
+  const mapZoomPct = $('cv-map-zoom-pct');
+
+  const MAP_W = 2400, MAP_H = 1600;
+  let mapCtx = null;
+  let mapTool = 'move';
+  let mapColor = '#7A8471';
+  let mapBrush = 10;
+  let mapVw = { x: 0, y: 0, scale: 0.4 };
+  let mapPan = null;
+  let painting = false;
+  let lastPt = null;
+  let undoStack = [];
+  let paintSaveTimeout = null;
+  let mapLoaded = false;
+  let activeLabelId = null;
+
+  const MAP_SWATCHES = ['#7A8471', '#5F7C8A', '#C9B88A', '#8B6F4E', '#3B342B', '#E8E2D4', '#C9613D'];
+  const swatchWrap = $('cv-map-swatches');
+  MAP_SWATCHES.forEach((c, i) => {
+    const s = document.createElement('span');
+    s.className = 'cv-map-swatch' + (i === 0 ? ' active' : '');
+    s.style.background = c;
+    s.title = c;
+    s.onclick = () => {
+      mapColor = c;
+      swatchWrap.querySelectorAll('.cv-map-swatch').forEach(el => el.classList.remove('active'));
+      s.classList.add('active');
+    };
+    swatchWrap.appendChild(s);
+  });
+  $('cv-map-custom-color').oninput = (e) => {
+    mapColor = e.target.value;
+    swatchWrap.querySelectorAll('.cv-map-swatch').forEach(el => el.classList.remove('active'));
+  };
+  $('cv-map-size').oninput = (e) => { mapBrush = parseInt(e.target.value, 10); };
+
+  function applyMapTransform() {
+    mapInner.style.transform = `translate(${mapVw.x}px, ${mapVw.y}px) scale(${mapVw.scale})`;
+    mapZoomPct.textContent = Math.round(mapVw.scale * 100) + '%';
+  }
+
+  function mapScreenToWorld(clientX, clientY) {
+    const rect = mapWrap.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - mapVw.x) / mapVw.scale,
+      y: (clientY - rect.top - mapVw.y) / mapVw.scale,
+    };
+  }
+
+  function fitMapToScreen() {
+    const rect = mapWrap.getBoundingClientRect();
+    if (!rect.width) return;
+    const scale = Math.min(rect.width / MAP_W, rect.height / MAP_H) * 0.92;
+    mapVw.scale = scale;
+    mapVw.x = (rect.width - MAP_W * scale) / 2;
+    mapVw.y = (rect.height - MAP_H * scale) / 2;
+    applyMapTransform();
+  }
+
+  function setMapTool(tool) {
+    mapTool = tool;
+    document.querySelectorAll('.cv-map-tool[data-tool]').forEach(b => {
+      b.classList.toggle('active', b.dataset.tool === tool);
+    });
+    mapWrap.className = '';
+    mapWrap.id = 'cv-map-wrap';
+    mapWrap.classList.add('tool-' + tool);
+    hideLabelToolbar();
+  }
+  document.querySelectorAll('.cv-map-tool[data-tool]').forEach(b => {
+    b.onclick = () => setMapTool(b.dataset.tool);
+  });
+
+  async function openMap() {
+    mapView.classList.add('open');
+    if (!mapCtx) {
+      try { mapCtx = mapPaint.getContext('2d'); } catch (e) { mapCtx = null; }
+    }
+    if (!mapLoaded) {
+      mapLoaded = true;
+      try {
+        const base = await idbGet('images', 'map-base');
+        if (base) { mapBaseImg.src = base; mapBaseImg.style.display = 'block'; }
+      } catch (e) {}
+      try {
+        const paintData = await idbGet('images', 'map-paint');
+        if (paintData && mapCtx) {
+          const img = new Image();
+          img.onload = () => mapCtx.drawImage(img, 0, 0);
+          img.src = paintData;
+        }
+      } catch (e) {}
+    }
+    renderMapLabels();
+    setTimeout(fitMapToScreen, 30);
+  }
+
+  function resetMapForReload() {
+    mapLoaded = false;
+    undoStack = [];
+    mapBaseImg.src = '';
+    mapBaseImg.style.display = 'none';
+    if (mapCtx) mapCtx.clearRect(0, 0, MAP_W, MAP_H);
+    if (mapView.classList.contains('open')) openMap();
+  }
+
+  function closeMap() {
+    hideLabelToolbar();
+    mapView.classList.remove('open');
+  }
+
+  $('cv-open-map-btn').onclick = openMap;
+  $('cv-map-back').onclick = closeMap;
+
+  /* --- pan & zoom --- */
+  mapWrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      const rect = mapWrap.getBoundingClientRect();
+      const cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      const prev = mapVw.scale;
+      let ns = Math.min(3, Math.max(0.15, prev * (1 - e.deltaY * 0.0015)));
+      mapVw.x = cx - ((cx - mapVw.x) / prev) * ns;
+      mapVw.y = cy - ((cy - mapVw.y) / prev) * ns;
+      mapVw.scale = ns;
+    } else {
+      mapVw.x -= e.deltaX;
+      mapVw.y -= e.deltaY;
+    }
+    applyMapTransform();
+  }, { passive: false });
+
+  function mapZoomBy(f) {
+    const rect = mapWrap.getBoundingClientRect();
+    const cx = rect.width / 2, cy = rect.height / 2;
+    const prev = mapVw.scale;
+    let ns = Math.min(3, Math.max(0.15, prev * f));
+    mapVw.x = cx - ((cx - mapVw.x) / prev) * ns;
+    mapVw.y = cy - ((cy - mapVw.y) / prev) * ns;
+    mapVw.scale = ns;
+    applyMapTransform();
+  }
+  $('cv-map-zoom-in').onclick = () => mapZoomBy(1.15);
+  $('cv-map-zoom-out').onclick = () => mapZoomBy(0.87);
+  $('cv-map-zoom-fit').onclick = fitMapToScreen;
+
+  /* --- painting --- */
+  function pushUndo() {
+    if (!mapCtx) return;
+    try {
+      undoStack.push(mapPaint.toDataURL());
+      if (undoStack.length > 15) undoStack.shift();
+    } catch (e) {}
+  }
+
+  $('cv-map-undo').onclick = () => {
+    if (!mapCtx || !undoStack.length) return;
+    const prev = undoStack.pop();
+    const img = new Image();
+    img.onload = () => {
+      mapCtx.clearRect(0, 0, MAP_W, MAP_H);
+      mapCtx.drawImage(img, 0, 0);
+      schedulePaintSave();
+    };
+    img.src = prev;
+  };
+
+  function schedulePaintSave() {
+    clearTimeout(paintSaveTimeout);
+    paintSaveTimeout = setTimeout(() => {
+      if (!mapCtx) return;
+      try {
+        const data = mapPaint.toDataURL('image/png');
+        idbSet('images', 'map-paint', data).then(flashSaved).catch(() => markStorageBroken());
+      } catch (e) {}
+    }, 800);
+  }
+
+  function strokeTo(pt) {
+    if (!mapCtx || !lastPt) return;
+    mapCtx.lineCap = 'round';
+    mapCtx.lineJoin = 'round';
+    mapCtx.lineWidth = mapBrush;
+    if (mapTool === 'erase') {
+      mapCtx.globalCompositeOperation = 'destination-out';
+      mapCtx.strokeStyle = 'rgba(0,0,0,1)';
+    } else {
+      mapCtx.globalCompositeOperation = 'source-over';
+      mapCtx.strokeStyle = mapColor;
+    }
+    mapCtx.beginPath();
+    mapCtx.moveTo(lastPt.x, lastPt.y);
+    mapCtx.lineTo(pt.x, pt.y);
+    mapCtx.stroke();
+    lastPt = pt;
+  }
+
+  mapWrap.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('#cv-label-toolbar') || e.target.closest('#cv-map-zoom')) return;
+    if (e.target.classList && e.target.classList.contains('cv-map-label')) return; // labels handle their own
+
+    if (mapTool === 'paint' || mapTool === 'erase') {
+      if (!mapCtx) return;
+      pushUndo();
+      painting = true;
+      lastPt = mapScreenToWorld(e.clientX, e.clientY);
+      // draw a dot for single clicks
+      strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
+      e.preventDefault();
+    } else if (mapTool === 'label') {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const label = { id: uid('lb'), text: 'Place name', x: p.x, y: p.y, size: 26, color: '#E8E2D4' };
+      state.map.labels.push(label);
+      persist();
+      renderMapLabels();
+      setMapTool('move');
+      setTimeout(() => {
+        const el = mapLabelsEl.querySelector(`[data-id="${label.id}"]`);
+        if (el) { el.focus(); selectAllText(el); }
+      }, 30);
+    } else {
+      // move tool: pan
+      mapPan = { sx: e.clientX, sy: e.clientY, ox: mapVw.x, oy: mapVw.y };
+      mapWrap.classList.add('panning');
+    }
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (painting) {
+      strokeTo(mapScreenToWorld(e.clientX, e.clientY));
+    } else if (mapPan) {
+      mapVw.x = mapPan.ox + (e.clientX - mapPan.sx);
+      mapVw.y = mapPan.oy + (e.clientY - mapPan.sy);
+      applyMapTransform();
+    }
+  });
+
+  window.addEventListener('pointerup', () => {
+    if (painting) {
+      painting = false;
+      lastPt = null;
+      schedulePaintSave();
+    }
+    if (mapPan) {
+      mapPan = null;
+      mapWrap.classList.remove('panning');
+    }
+  });
+
+  function selectAllText(el) {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  /* --- labels --- */
+  function renderMapLabels() {
+    mapLabelsEl.innerHTML = '';
+    state.map.labels.forEach(lb => {
+      const el = document.createElement('div');
+      el.className = 'cv-map-label';
+      el.dataset.id = lb.id;
+      el.contentEditable = 'true';
+      el.spellcheck = false;
+      el.textContent = lb.text;
+      el.style.left = lb.x + 'px';
+      el.style.top = lb.y + 'px';
+      el.style.fontSize = lb.size + 'px';
+      el.style.color = lb.color;
+
+      let dragInfo = null;
+      el.onpointerdown = (e) => {
+        if (document.activeElement === el) return; // editing: let text selection work
+        e.preventDefault();
+        e.stopPropagation();
+        dragInfo = { sx: e.clientX, sy: e.clientY, ox: lb.x, oy: lb.y, moved: false };
+        const move = (ev) => {
+          const dx = (ev.clientX - dragInfo.sx) / mapVw.scale;
+          const dy = (ev.clientY - dragInfo.sy) / mapVw.scale;
+          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) dragInfo.moved = true;
+          lb.x = dragInfo.ox + dx;
+          lb.y = dragInfo.oy + dy;
+          el.style.left = lb.x + 'px';
+          el.style.top = lb.y + 'px';
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          if (dragInfo.moved) {
+            persist();
+            positionLabelToolbar(lb, el);
+          } else {
+            el.focus();
+            showLabelToolbar(lb, el);
+          }
+          dragInfo = null;
+        };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', up);
+      };
+
+      el.oninput = () => {
+        lb.text = el.textContent;
+        persist();
+      };
+      el.onfocus = () => showLabelToolbar(lb, el);
+      el.onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); el.blur(); hideLabelToolbar(); }
+        e.stopPropagation();
+      };
+
+      mapLabelsEl.appendChild(el);
+    });
+  }
+
+  function positionLabelToolbar(lb, el) {
+    if (!labelToolbar.classList.contains('show')) return;
+    const wrapRect = mapWrap.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    labelToolbar.style.left = Math.max(8, elRect.left - wrapRect.left) + 'px';
+    labelToolbar.style.top = Math.max(8, elRect.top - wrapRect.top - 38) + 'px';
+  }
+
+  function showLabelToolbar(lb, el) {
+    activeLabelId = lb.id;
+    labelToolbar.classList.add('show');
+    positionLabelToolbar(lb, el);
+  }
+  function hideLabelToolbar() {
+    activeLabelId = null;
+    labelToolbar.classList.remove('show');
+  }
+
+  function activeLabel() {
+    return state.map.labels.find(l => l.id === activeLabelId);
+  }
+  function activeLabelEl() {
+    return activeLabelId ? mapLabelsEl.querySelector(`[data-id="${activeLabelId}"]`) : null;
+  }
+
+  $('cv-lbl-bigger').onclick = () => {
+    const lb = activeLabel(), el = activeLabelEl();
+    if (!lb || !el) return;
+    lb.size = Math.min(120, lb.size + 4);
+    el.style.fontSize = lb.size + 'px';
+    persist();
+  };
+  $('cv-lbl-smaller').onclick = () => {
+    const lb = activeLabel(), el = activeLabelEl();
+    if (!lb || !el) return;
+    lb.size = Math.max(10, lb.size - 4);
+    el.style.fontSize = lb.size + 'px';
+    persist();
+  };
+  labelToolbar.querySelectorAll('.lbl-color').forEach(sw => {
+    sw.onclick = () => {
+      const lb = activeLabel(), el = activeLabelEl();
+      if (!lb || !el) return;
+      lb.color = sw.dataset.c;
+      el.style.color = lb.color;
+      persist();
+    };
+  });
+  $('cv-lbl-delete').onclick = () => {
+    const lb = activeLabel();
+    if (!lb) return;
+    showConfirm({
+      title: `Delete "${lb.text}"?`,
+      msg: 'The place name will be removed from the map.',
+      okLabel: 'Delete label',
+      onConfirm: () => {
+        state.map.labels = state.map.labels.filter(l => l.id !== lb.id);
+        hideLabelToolbar();
+        renderMapLabels();
+        persist();
+      },
+    });
+  };
+
+  /* --- base image --- */
+  $('cv-map-setbase').onclick = () => $('cv-map-base-input').click();
+  $('cv-map-base-input').onchange = () => {
+    const file = $('cv-map-base-input').files && $('cv-map-base-input').files[0];
+    $('cv-map-base-input').value = '';
+    if (file) setMapBase(file);
+  };
+
+  function setMapBase(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = async () => {
+        const maxDim = 2400;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          const s = maxDim / Math.max(width, height);
+          width = Math.round(width * s);
+          height = Math.round(height * s);
+        }
+        const c = document.createElement('canvas');
+        c.width = width; c.height = height;
+        c.getContext('2d').drawImage(img, 0, 0, width, height);
+        const dataUrl = c.toDataURL('image/jpeg', 0.88);
+        try {
+          await idbSet('images', 'map-base', dataUrl);
+        } catch (e) { markStorageBroken(); }
+        state.map.hasBase = true;
+        persist();
+        mapBaseImg.src = dataUrl;
+        mapBaseImg.style.display = 'block';
+        flashSaved();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // paste an image while the map is open -> offer to set as base
+  window.addEventListener('paste', (e) => {
+    if (!mapView.classList.contains('open')) return;
+    const active = document.activeElement;
+    if (active && active.classList && active.classList.contains('cv-map-label')) return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (!file) return;
+        e.preventDefault();
+        showConfirm({
+          title: 'Use this image as the map base?',
+          msg: state.map.hasBase ? 'This replaces your current base image. Paint and labels stay.' : 'It becomes the background you paint and label on top of.',
+          okLabel: 'Set as base',
+          onConfirm: () => setMapBase(file),
+        });
+        return;
+      }
+    }
+  });
+
+  /* --- Esc closes fullscreen views --- */
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (confirmOverlay.classList.contains('show')) return; // handled elsewhere
+    if (writingView.classList.contains('open')) closeWriting();
+    else if (mapView.classList.contains('open')) { hideLabelToolbar(); closeMap(); }
+  });
 
   applyTransform();
   load();
