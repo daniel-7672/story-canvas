@@ -657,23 +657,13 @@
   }
   #cv-brush-cursor.paint { border: 1.5px solid var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
   #cv-brush-cursor.erase { border: 1.5px dashed var(--text); box-shadow: 0 0 0 1px rgba(0,0,0,0.5); }
+  #cv-brush-cursor.age { border: 1.5px solid #C9A567; box-shadow: 0 0 0 1px rgba(0,0,0,0.5); background: rgba(201,165,103,0.12); }
   #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: none; }
   #cv-map-wrap.tool-fill { cursor: cell; }
   #cv-map-wrap.tool-pick { cursor: crosshair; }
+  #cv-map-wrap.tool-age { cursor: none; }
 
   /* ---------- MAP IMAGES ---------- */
-  #cv-map-artlayer {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    transition: filter 0.15s ease;
-  }
-  #cv-map-vignette {
-    position: absolute; inset: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse at center, rgba(90,60,20,0) 42%, rgba(58,38,14,0.6) 100%);
-    mix-blend-mode: multiply;
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
   #cv-map-images { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   .cv-map-img { position: absolute; user-select: none; }
   .cv-map-img img { width: 100%; height: 100%; display: block; pointer-events: none; }
@@ -789,7 +779,6 @@
   #cv-timeline-events { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
   .cv-tl-event {
     position: absolute; top: 50%; transform: translate(-50%, -50%);
-    display: flex; flex-direction: column; align-items: center;
     cursor: grab; user-select: none;
     transition: transform 0.15s ease;
   }
@@ -800,20 +789,26 @@
     background: var(--wax-dim); border: 2px solid var(--bg);
     box-shadow: 0 0 0 2px var(--wax-dim);
     transition: transform 0.12s ease;
+    display: block;
   }
   .cv-tl-event:hover .cv-tl-dot, .cv-tl-event.active .cv-tl-dot { transform: scale(1.25); }
   .cv-tl-event.locked .cv-tl-dot { box-shadow: 0 0 0 2px var(--text-faint); background: var(--text-faint); }
   .cv-tl-label {
-    margin-top: 8px;
+    position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    margin-bottom: 8px;
     font-family: 'Fraunces', serif; font-weight: 600; font-size: 12.5px;
     color: var(--text); text-shadow: 0 1px 4px rgba(0,0,0,0.7);
     white-space: nowrap;
     text-align: center;
   }
   .cv-tl-date {
+    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    margin-top: 4px;
     font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-faint);
-    margin-top: 2px; white-space: nowrap;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none; transition: opacity 0.15s ease;
   }
+  .cv-tl-event.active .cv-tl-date { opacity: 1; }
   #cv-timeline-zoom {
     position: absolute; bottom: 14px; left: 14px; z-index: 10;
     display: flex; align-items: center; gap: 4px;
@@ -937,16 +932,48 @@
   }
   #cv-tlb-caption::placeholder { color: var(--text-faint); font-style: italic; }
 
+  .cv-tl-scale-btn { font-size: 10px; padding: 6px 9px; }
+  #cv-axis-panel { width: 230px; }
   #cv-axis-panel .cv-resize-row input[type="text"] { width: 90px; }
-  #cv-style-panel { width: 250px; }
-  #cv-style-panel .cv-resize-row input[type="range"] { flex: 1; accent-color: var(--wax-dim); }
-  #cv-style-panel .cv-resize-row span { width: 56px; }
+  #cv-axis-layerlist { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+  .cv-axis-layer-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 7px; border-radius: 4px; cursor: pointer;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim);
+  }
+  .cv-axis-layer-item:hover { background: var(--surface-hi); color: var(--text); }
+  .cv-axis-layer-item.active { background: var(--wax-dim); color: #1C1A17; font-weight: 600; }
+  .cv-axis-layer-item span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cv-axis-divider { border-top: 1px dashed var(--border); margin: 6px 0; }
+  .cv-axis-actions { display: flex; gap: 6px; margin-top: 4px; }
   #cv-axis-apply {
-    width: 100%; margin-top: 4px;
+    flex: 2;
     font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 600;
     background: var(--wax-dim); color: #1C1A17; border: none; border-radius: 4px; padding: 7px; cursor: pointer;
   }
   #cv-axis-apply:hover { background: var(--wax); }
+  #cv-axis-deletelayer {
+    flex: 1;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    background: transparent; color: var(--text-faint); border: 1px solid var(--border-soft); border-radius: 4px; cursor: pointer;
+  }
+  #cv-axis-deletelayer:hover { color: var(--wax); border-color: var(--wax-dim); }
+  #cv-axis-newlayer {
+    width: 100%;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    background: transparent; color: var(--text-faint); border: 1px dashed var(--border);
+    padding: 6px; border-radius: 4px; cursor: pointer;
+  }
+  #cv-axis-newlayer:hover { color: var(--wax); border-color: var(--wax-dim); }
+  #cv-age-strength-wrap {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 5px;
+    padding: 4px 8px;
+  }
+  .cv-age-label {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); white-space: nowrap;
+  }
+  #cv-map-age-strength { width: 70px; accent-color: #8B6F4E; }
 
   /* ---------- LIGHTBOX ---------- */
   #cv-lightbox {
@@ -1129,9 +1156,14 @@
       <button class="cv-map-tool" data-tool="fill" title="Fill an enclosed area with the current color">&#129529; Fill</button>
       <button class="cv-map-tool" data-tool="pick" title="Click any painted spot to reuse its exact color">&#128167; Pick color</button>
       <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
+      <button class="cv-map-tool" data-tool="age" title="Paint an aged, weathered look directly onto the map -- builds up the more you go over it">&#127756; Age</button>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
       <input type="color" id="cv-map-custom-color" value="#7A8471" title="Brush color">
       <input type="range" id="cv-map-size" min="2" max="80" value="10" title="Brush size">
+      <span id="cv-age-strength-wrap" title="How strong each pass of the Age brush is">
+        <span class="cv-age-label">Age strength</span>
+        <input type="range" id="cv-map-age-strength" min="5" max="100" value="35">
+      </span>
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
       <button class="cv-map-tool" id="cv-map-redo" title="Redo">&#8631; Redo</button>
       <span class="spacer"></span>
@@ -1147,21 +1179,11 @@
         </div>
       </div>
       <input type="file" id="cv-map-img-input" accept="image/*" multiple style="display:none;">
-      <div class="cv-resize-wrap">
-        <button class="cv-map-tool" id="cv-map-style-btn" title="Give the map an aged, fantasy-map look">&#127760; Map style</button>
-        <div id="cv-style-panel">
-          <div class="cv-resize-row"><span>Intensity</span><input type="range" id="cv-map-style-intensity" min="0" max="100" value="0"></div>
-          <div class="cv-resize-note">A weathered, warm-toned finish over your painting and pictures. Doesn't change what you've drawn -- turn it off any time.</div>
-        </div>
-      </div>
     </div>
     <div id="cv-map-wrap">
       <div id="cv-map-inner">
-        <div id="cv-map-artlayer">
-          <div id="cv-map-images"></div>
-          <canvas id="cv-map-paint" width="2400" height="1600"></canvas>
-          <div id="cv-map-vignette"></div>
-        </div>
+        <div id="cv-map-images"></div>
+        <canvas id="cv-map-paint" width="2400" height="1600"></canvas>
         <div id="cv-map-labels"></div>
         <div id="cv-map-imgsel">
           <button id="cv-map-imgdel" title="Remove this image (drawings stay)">&#x2715;</button>
@@ -1190,13 +1212,20 @@
       <button class="cv-back-btn" id="cv-timeline-back">&larr; Back</button>
       <button class="cv-map-tool primary" id="cv-timeline-add">+ Add date</button>
       <div class="cv-resize-wrap">
-        <button class="cv-map-tool" id="cv-timeline-axis-btn" title="Set what the numbers along the line mean">&#128207; Timeline scale</button>
+        <button class="cv-map-tool cv-tl-scale-btn" id="cv-timeline-axis-btn" title="Set what the numbers along the line mean">&#128207; Scale</button>
         <div id="cv-axis-panel">
+          <div id="cv-axis-layerlist"></div>
+          <button id="cv-axis-newlayer">+ New layer</button>
+          <div class="cv-axis-divider"></div>
+          <div class="cv-resize-row"><span>Name</span><input type="text" id="cv-axis-name" placeholder="Years" maxlength="16"></div>
           <div class="cv-resize-row"><span>Start</span><input type="number" id="cv-axis-start" value="0"></div>
           <div class="cv-resize-row"><span>End</span><input type="number" id="cv-axis-end" value="1000"></div>
           <div class="cv-resize-row"><span>Unit</span><input type="text" id="cv-axis-unit" placeholder="Year, Day..." maxlength="12"></div>
-          <button id="cv-axis-apply">Apply</button>
-          <div class="cv-resize-note">Type a number in a date's "Date" field and it snaps to the right spot on the line.</div>
+          <div class="cv-axis-actions">
+            <button id="cv-axis-apply">Apply</button>
+            <button id="cv-axis-deletelayer" title="Delete this layer">Delete</button>
+          </div>
+          <div class="cv-resize-note">Type a number in a date's "Date" field to snap it to the active layer's scale.</div>
         </div>
       </div>
       <span class="spacer"></span>
@@ -1440,12 +1469,17 @@
     if (!Array.isArray(state.map.images)) state.map.images = [];
     if (typeof state.map.w !== 'number') state.map.w = 3600;
     if (typeof state.map.h !== 'number') state.map.h = 1300;
-    if (typeof state.map.styleIntensity !== 'number') state.map.styleIntensity = 0;
     if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
     if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
     if (!state.timeline.axis || typeof state.timeline.axis !== 'object') state.timeline.axis = { start: 0, end: 1000, unit: '' };
     if (!state.timeline.bookendStart) state.timeline.bookendStart = { title: '', caption: '' };
     if (!state.timeline.bookendEnd) state.timeline.bookendEnd = { title: '', caption: '' };
+    if (!Array.isArray(state.timeline.layers) || !state.timeline.layers.length) {
+      const a = state.timeline.axis;
+      state.timeline.layers = [{ id: uid('lyr'), name: 'Main', start: a.start, end: a.end, unit: a.unit || '' }];
+      state.timeline.activeLayerId = state.timeline.layers[0].id;
+    }
+    if (!state.timeline.activeLayerId) state.timeline.activeLayerId = state.timeline.layers[0].id;
     // migrate old combined image labels to separate title/caption
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
@@ -1743,12 +1777,17 @@
           if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
           if (!Array.isArray(state.map.labels)) state.map.labels = [];
           if (!Array.isArray(state.map.images)) state.map.images = [];
-          if (typeof state.map.styleIntensity !== 'number') state.map.styleIntensity = 0;
-          if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
+                if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
           if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
           if (!state.timeline.axis || typeof state.timeline.axis !== 'object') state.timeline.axis = { start: 0, end: 1000, unit: '' };
           if (!state.timeline.bookendStart) state.timeline.bookendStart = { title: '', caption: '' };
           if (!state.timeline.bookendEnd) state.timeline.bookendEnd = { title: '', caption: '' };
+          if (!Array.isArray(state.timeline.layers) || !state.timeline.layers.length) {
+            const a = state.timeline.axis;
+            state.timeline.layers = [{ id: uid('lyr'), name: 'Main', start: a.start, end: a.end, unit: a.unit || '' }];
+            state.timeline.activeLayerId = state.timeline.layers[0].id;
+          }
+          if (!state.timeline.activeLayerId) state.timeline.activeLayerId = state.timeline.layers[0].id;
           const images = payload.images || {};
           const writes = Object.entries(images).map(([k, v]) => {
             imageCache[k] = v;
@@ -2798,8 +2837,6 @@
   const mapView = $('cv-map-view');
   const mapWrap = $('cv-map-wrap');
   const mapInner = $('cv-map-inner');
-  const mapArtLayer = $('cv-map-artlayer');
-  const mapVignette = $('cv-map-vignette');
   const mapImagesEl = $('cv-map-images');
   const mapPaint = $('cv-map-paint');
   const mapLabelsEl = $('cv-map-labels');
@@ -2833,6 +2870,7 @@
   let mapTool = 'move';
   let mapColor = '#7A8471';
   let mapBrush = 10;
+  let ageStrength = 35;
   let mapVw = { x: 0, y: 0, scale: 0.4 };
   let mapPan = null;
   let painting = false;
@@ -2848,6 +2886,7 @@
   let lastBrushPos = null;
 
   $('cv-map-custom-color').oninput = (e) => { mapColor = e.target.value; };
+  $('cv-map-age-strength').oninput = (e) => { ageStrength = parseInt(e.target.value, 10); };
   $('cv-map-size').oninput = (e) => {
     mapBrush = parseInt(e.target.value, 10);
     updateBrushCursor();
@@ -2902,7 +2941,7 @@
     mapWrap.classList.add('tool-' + tool);
     hideLabelToolbar();
     hideImgSel();
-    if (tool !== 'paint' && tool !== 'erase') brushCursor.style.display = 'none';
+    if (tool !== 'paint' && tool !== 'erase' && tool !== 'age') brushCursor.style.display = 'none';
     else updateBrushCursor();
   }
   document.querySelectorAll('.cv-map-tool[data-tool]').forEach(b => {
@@ -2940,45 +2979,8 @@
     }
     renderMapImages();
     renderMapLabels();
-    applyMapStyle();
     setTimeout(fitMapToScreen, 30);
   }
-
-  /* --- fantasy/aged map style: a non-destructive visual filter, never touches the actual pixels --- */
-  function applyMapStyle() {
-    const t = (state.map.styleIntensity || 0) / 100;
-    if (t <= 0) {
-      mapArtLayer.style.filter = 'none';
-      mapVignette.style.opacity = 0;
-      return;
-    }
-    const sepia = (0.5 * t).toFixed(2);
-    const saturate = (1 - 0.35 * t).toFixed(2);
-    const contrast = (1 + 0.12 * t).toFixed(2);
-    const brightness = (1 - 0.06 * t).toFixed(2);
-    mapArtLayer.style.filter = `sepia(${sepia}) saturate(${saturate}) contrast(${contrast}) brightness(${brightness})`;
-    mapVignette.style.opacity = t;
-  }
-
-  const styleBtn = $('cv-map-style-btn');
-  const stylePanel = $('cv-style-panel');
-  styleBtn.onclick = (e) => {
-    e.stopPropagation();
-    if (!stylePanel.classList.contains('show')) {
-      $('cv-map-style-intensity').value = state.map.styleIntensity || 0;
-    }
-    stylePanel.classList.toggle('show');
-  };
-  document.addEventListener('pointerdown', (e) => {
-    if (!stylePanel.classList.contains('show')) return;
-    if (e.target.closest('#cv-style-panel') || e.target.closest('#cv-map-style-btn')) return;
-    stylePanel.classList.remove('show');
-  });
-  $('cv-map-style-intensity').oninput = (e) => {
-    state.map.styleIntensity = parseInt(e.target.value, 10);
-    applyMapStyle();
-    persist();
-  };
 
   function resetMapForReload() {
     mapLoaded = false;
@@ -3117,6 +3119,11 @@
 
   function strokeTo(pt) {
     if (!mapCtx || !lastPt) return;
+    if (mapTool === 'age') {
+      ageStrokeTo(pt);
+      lastPt = pt;
+      return;
+    }
     mapCtx.lineCap = 'round';
     mapCtx.lineJoin = 'round';
     mapCtx.lineWidth = mapBrush;
@@ -3132,6 +3139,37 @@
     mapCtx.lineTo(pt.x, pt.y);
     mapCtx.stroke();
     lastPt = pt;
+  }
+
+  const AGE_TONES = ['101,74,44', '84,58,32', '120,92,55']; // warm sepia/umber browns
+  function ageStrokeTo(pt) {
+    // Lays down soft, irregular warm-toned blotches with a multiply blend, so it darkens and
+    // "weathers" whatever's already there (paint or a reference image) instead of painting flat
+    // new color over it. Builds up gradually the more you go over an area, like real staining.
+    const dx = pt.x - lastPt.x, dy = pt.y - lastPt.y;
+    const dist = Math.hypot(dx, dy);
+    const step = Math.max(1, mapBrush * 0.35);
+    const steps = Math.max(1, Math.round(dist / step));
+    const baseAlpha = (ageStrength / 100) * 0.16;
+    mapCtx.globalCompositeOperation = 'multiply';
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      const px = lastPt.x + dx * t, py = lastPt.y + dy * t;
+      const jitter = mapBrush * 0.4;
+      const ox = (Math.random() - 0.5) * jitter;
+      const oy = (Math.random() - 0.5) * jitter;
+      const radius = (mapBrush / 2) * (0.8 + Math.random() * 0.7);
+      const tone = AGE_TONES[Math.floor(Math.random() * AGE_TONES.length)];
+      const alpha = baseAlpha * (0.6 + Math.random() * 0.6);
+      const grad = mapCtx.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, radius);
+      grad.addColorStop(0, `rgba(${tone},${alpha.toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${tone},0)`);
+      mapCtx.fillStyle = grad;
+      mapCtx.beginPath();
+      mapCtx.arc(px + ox, py + oy, radius, 0, Math.PI * 2);
+      mapCtx.fill();
+    }
+    mapCtx.globalCompositeOperation = 'source-over';
   }
 
   function floodFillAt(worldX, worldY, fillHex, tolerance) {
@@ -3226,7 +3264,7 @@
     if (e.target.closest('#cv-label-toolbar') || e.target.closest('#cv-map-zoom') || e.target.closest('#cv-map-imgsel')) return;
     if (e.target.classList && e.target.classList.contains('cv-map-label')) return; // labels handle their own
 
-    if (mapTool === 'paint' || mapTool === 'erase') {
+    if (mapTool === 'paint' || mapTool === 'erase' || mapTool === 'age') {
       if (!mapCtx) return;
       pushUndo();
       painting = true;
@@ -3799,7 +3837,7 @@
     if (!range || range <= 0) return;
     const pxPerUnit = (TL_W / range) * tlVw.scale;
     if (!isFinite(pxPerUnit) || pxPerUnit <= 0) return;
-    const targetPxPerTick = 110;
+    const targetPxPerTick = 90 + (axis.unit ? Math.min(120, axis.unit.length * 9 + 30) : 20);
     const rawStep = targetPxPerTick / pxPerUnit;
     const step = tlNiceStep(rawStep);
     const startTick = Math.ceil(axis.start / step) * step;
@@ -4246,15 +4284,52 @@
     }
   });
 
-  /* --- axis / scale configuration panel --- */
+  /* --- axis / scale layers panel --- */
   const axisBtn = $('cv-timeline-axis-btn');
   const axisPanel = $('cv-axis-panel');
+
+  function renderAxisLayerList() {
+    const listEl = $('cv-axis-layerlist');
+    listEl.innerHTML = '';
+    state.timeline.layers.forEach(layer => {
+      const item = document.createElement('div');
+      item.className = 'cv-axis-layer-item' + (layer.id === state.timeline.activeLayerId ? ' active' : '');
+      const span = document.createElement('span');
+      span.textContent = layer.name || '(unnamed)';
+      item.appendChild(span);
+      item.onclick = () => selectAxisLayer(layer.id);
+      listEl.appendChild(item);
+    });
+  }
+
+  function fillAxisForm(layer) {
+    $('cv-axis-name').value = layer.name || '';
+    $('cv-axis-start').value = layer.start;
+    $('cv-axis-end').value = layer.end;
+    $('cv-axis-unit').value = layer.unit || '';
+  }
+
+  function selectAxisLayer(id) {
+    const layer = state.timeline.layers.find(l => l.id === id);
+    if (!layer) return;
+    state.timeline.activeLayerId = id;
+    state.timeline.axis = { start: layer.start, end: layer.end, unit: layer.unit };
+    fillAxisForm(layer);
+    renderAxisLayerList();
+    persist();
+    currentTlEvents().forEach(ev => {
+      if (typeof ev.dateValue === 'number') { ev.x = tlValueToX(ev.dateValue); clampTlEvent(ev); }
+    });
+    renderTimelineRuler();
+    renderTimelineEvents();
+  }
+
   axisBtn.onclick = (e) => {
     e.stopPropagation();
     if (!axisPanel.classList.contains('show')) {
-      $('cv-axis-start').value = state.timeline.axis.start;
-      $('cv-axis-end').value = state.timeline.axis.end;
-      $('cv-axis-unit').value = state.timeline.axis.unit || '';
+      renderAxisLayerList();
+      const layer = state.timeline.layers.find(l => l.id === state.timeline.activeLayerId) || state.timeline.layers[0];
+      if (layer) fillAxisForm(layer);
     }
     axisPanel.classList.toggle('show');
   };
@@ -4263,6 +4338,33 @@
     if (e.target.closest('#cv-axis-panel') || e.target.closest('#cv-timeline-axis-btn')) return;
     axisPanel.classList.remove('show');
   });
+
+  $('cv-axis-newlayer').onclick = () => {
+    const layer = { id: uid('lyr'), name: 'New layer', start: 0, end: 1000, unit: '' };
+    state.timeline.layers.push(layer);
+    persist();
+    selectAxisLayer(layer.id);
+  };
+
+  $('cv-axis-deletelayer').onclick = () => {
+    if (state.timeline.layers.length <= 1) {
+      showConfirm({ title: "Can't delete the last layer", msg: 'Create another layer first if you want to remove this one.', okLabel: 'OK', hideCancel: true, onConfirm: () => {} });
+      return;
+    }
+    const id = state.timeline.activeLayerId;
+    const layer = state.timeline.layers.find(l => l.id === id);
+    showConfirm({
+      title: `Delete "${layer ? layer.name : 'this layer'}"?`,
+      msg: "Dates snapped to it keep their current spot, they just won't move with this layer anymore.",
+      okLabel: 'Delete layer',
+      onConfirm: () => {
+        state.timeline.layers = state.timeline.layers.filter(l => l.id !== id);
+        persist();
+        selectAxisLayer(state.timeline.layers[0].id);
+      },
+    });
+  };
+
   $('cv-axis-apply').onclick = () => {
     const start = parseFloat($('cv-axis-start').value);
     const end = parseFloat($('cv-axis-end').value);
@@ -4270,7 +4372,11 @@
       showConfirm({ title: "That range doesn't work", msg: 'The end needs to be a bigger number than the start.', okLabel: 'OK', hideCancel: true, onConfirm: () => {} });
       return;
     }
-    state.timeline.axis = { start, end, unit: $('cv-axis-unit').value.trim() };
+    const name = $('cv-axis-name').value.trim() || 'Layer';
+    const unit = $('cv-axis-unit').value.trim();
+    const layer = state.timeline.layers.find(l => l.id === state.timeline.activeLayerId);
+    if (layer) { layer.name = name; layer.start = start; layer.end = end; layer.unit = unit; }
+    state.timeline.axis = { start, end, unit };
     // events placed by typed number stay correct on the new scale; freeform-labeled ones are untouched
     currentTlEvents().forEach(ev => {
       if (typeof ev.dateValue === 'number') {
@@ -4281,6 +4387,7 @@
     persist();
     renderTimelineRuler();
     renderTimelineEvents();
+    renderAxisLayerList();
     axisPanel.classList.remove('show');
     flashSaved();
   };
