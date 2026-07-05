@@ -694,6 +694,35 @@
   }
   #cv-map-custom-color { width: 34px; height: 30px; border: 1px solid var(--border-soft); border-radius: 5px; background: var(--surface); cursor: pointer; padding: 2px; }
 
+  .cv-resize-wrap { position: relative; }
+  #cv-resize-panel {
+    display: none;
+    position: absolute; top: 38px; left: 0; z-index: 30;
+    background: var(--surface-hi); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px; width: 260px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+  }
+  #cv-resize-panel.show { display: block; }
+  .cv-resize-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .cv-resize-row span {
+    width: 40px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: var(--text-dim);
+  }
+  .cv-resize-amt {
+    width: 56px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    background: var(--surface); border: 1px solid var(--border-soft); color: var(--text);
+    border-radius: 4px; padding: 4px;
+  }
+  .cv-resize-row button {
+    font-family: 'JetBrains Mono', monospace; font-size: 9.5px;
+    background: var(--surface); border: 1px solid var(--border-soft); color: var(--text-dim);
+    border-radius: 4px; padding: 5px 7px; cursor: pointer;
+  }
+  .cv-resize-row button:hover { color: var(--text); border-color: var(--border); }
+  .cv-resize-note {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint);
+    line-height: 1.5; margin-top: 4px;
+  }
+
   /* ---------- WRITING GALLERY & FULL WIDTH ---------- */
   #cv-writing-gallery {
     display: flex; gap: 10px; flex-wrap: wrap;
@@ -890,7 +919,16 @@
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
       <span class="spacer"></span>
       <button class="cv-map-tool" id="cv-map-addimg">+ Add map images</button>
-      <button class="cv-map-tool" id="cv-map-expand" title="Grow the board to the right and bottom. Everything stays where it is.">&#x2922; Expand board</button>
+      <div class="cv-resize-wrap">
+        <button class="cv-map-tool" id="cv-map-resize-btn" title="Grow or shrink the board, pick a side and an amount">&#x2922; Resize board</button>
+        <div id="cv-resize-panel">
+          <div class="cv-resize-row" data-dir="top"><span>Top</span><input type="number" class="cv-resize-amt" value="500" min="50" max="5000"><button class="cv-resize-grow">+ Grow</button><button class="cv-resize-shrink">&minus; Shrink</button></div>
+          <div class="cv-resize-row" data-dir="bottom"><span>Bottom</span><input type="number" class="cv-resize-amt" value="500" min="50" max="5000"><button class="cv-resize-grow">+ Grow</button><button class="cv-resize-shrink">&minus; Shrink</button></div>
+          <div class="cv-resize-row" data-dir="left"><span>Left</span><input type="number" class="cv-resize-amt" value="500" min="50" max="5000"><button class="cv-resize-grow">+ Grow</button><button class="cv-resize-shrink">&minus; Shrink</button></div>
+          <div class="cv-resize-row" data-dir="right"><span>Right</span><input type="number" class="cv-resize-amt" value="500" min="50" max="5000"><button class="cv-resize-grow">+ Grow</button><button class="cv-resize-shrink">&minus; Shrink</button></div>
+          <div class="cv-resize-note">Pictures and paint stay put. Growing left/top or shrinking any side may shift things near that edge.</div>
+        </div>
+      </div>
       <input type="file" id="cv-map-img-input" accept="image/*" multiple style="display:none;">
     </div>
     <div id="cv-map-wrap">
@@ -1105,8 +1143,8 @@
     if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false, images: [] };
     if (!Array.isArray(state.map.labels)) state.map.labels = [];
     if (!Array.isArray(state.map.images)) state.map.images = [];
-    if (typeof state.map.w !== 'number') state.map.w = 2400;
-    if (typeof state.map.h !== 'number') state.map.h = 1600;
+    if (typeof state.map.w !== 'number') state.map.w = 3200;
+    if (typeof state.map.h !== 'number') state.map.h = 1400;
     // migrate old combined image labels to separate title/caption
     Object.values(state.nodesByBoard).forEach(nodes => {
       (nodes || []).forEach(n => {
@@ -2458,23 +2496,25 @@
   const imgSel = $('cv-map-imgsel');
   const brushCursor = $('cv-brush-cursor');
 
-  const MAP_DEFAULT_W = 2400, MAP_DEFAULT_H = 1600;
+  const MAP_DEFAULT_W = 3200, MAP_DEFAULT_H = 1400;
   function boardW() { return (state.map && state.map.w) || MAP_DEFAULT_W; }
   function boardH() { return (state.map && state.map.h) || MAP_DEFAULT_H; }
+  function resizePaintCanvas(newW, newH, offsetX, offsetY) {
+    let snap = null;
+    try { if (mapPaint.width > 0 && mapPaint.height > 0) snap = mapPaint.toDataURL(); } catch (e) {}
+    mapPaint.width = newW;
+    mapPaint.height = newH;
+    if (snap && mapCtx) {
+      const img = new Image();
+      img.onload = () => { mapCtx.drawImage(img, offsetX, offsetY); schedulePaintSave(); };
+      img.src = snap;
+    }
+  }
   function applyBoardSize() {
     mapInner.style.width = boardW() + 'px';
     mapInner.style.height = boardH() + 'px';
     if (mapPaint.width !== boardW() || mapPaint.height !== boardH()) {
-      // resizing a canvas clears it; snapshot and redraw to preserve paint
-      let snap = null;
-      try { if (mapPaint.width > 0) snap = mapPaint.toDataURL(); } catch (e) {}
-      mapPaint.width = boardW();
-      mapPaint.height = boardH();
-      if (snap && mapCtx) {
-        const img = new Image();
-        img.onload = () => mapCtx.drawImage(img, 0, 0);
-        img.src = snap;
-      }
+      resizePaintCanvas(boardW(), boardH(), 0, 0);
     }
   }
   let mapCtx = null;
@@ -2841,10 +2881,16 @@
     sel.addRange(range);
   }
 
+  function clampLabelToBoard(lb) {
+    lb.x = Math.max(0, Math.min(boardW() - 10, lb.x));
+    lb.y = Math.max(0, Math.min(boardH() - 10, lb.y));
+  }
+
   /* --- labels --- */
   function renderMapLabels() {
     mapLabelsEl.innerHTML = '';
     state.map.labels.forEach(lb => {
+      clampLabelToBoard(lb);
       const el = document.createElement('div');
       el.className = 'cv-map-label';
       el.dataset.id = lb.id;
@@ -3090,22 +3136,81 @@
 
   $('cv-map-addimg').onclick = () => $('cv-map-img-input').click();
 
-  $('cv-map-expand').onclick = () => {
-    showConfirm({
-      title: 'Expand the board?',
-      msg: 'Adds 800px of space to the right and 500px to the bottom. Your pictures, paint, and labels stay exactly where they are.',
-      okLabel: 'Expand',
-      onConfirm: () => {
-        state.map.w = boardW() + 800;
-        state.map.h = boardH() + 500;
-        applyBoardSize();
-        clampMapView();
-        applyMapTransform();
-        persist();
-        flashSaved();
-      },
-    });
+  const MIN_BOARD_DIM = 400;
+
+  function resizeBoardEdge(dir, rawAmount, grow) {
+    let amount = Math.round(rawAmount) || 500;
+    amount = Math.max(50, Math.min(5000, amount));
+    const isHorizontal = dir === 'left' || dir === 'right';
+    const currentDim = isHorizontal ? boardW() : boardH();
+
+    if (!grow) {
+      const maxShrink = currentDim - MIN_BOARD_DIM;
+      if (maxShrink <= 0) {
+        showConfirm({
+          title: 'Already at minimum size',
+          msg: "The board can't get any smaller from that side.",
+          okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+        });
+        return;
+      }
+      amount = Math.min(amount, maxShrink);
+    }
+
+    const delta = grow ? amount : -amount;
+    const shiftX = dir === 'left' ? delta : 0;
+    const shiftY = dir === 'top' ? delta : 0;
+
+    const doResize = () => {
+      if (isHorizontal) state.map.w = boardW() + delta;
+      else state.map.h = boardH() + delta;
+
+      if (shiftX || shiftY) {
+        (state.map.images || []).forEach(mi => { mi.x += shiftX; mi.y += shiftY; });
+        (state.map.labels || []).forEach(lb => { lb.x += shiftX; lb.y += shiftY; });
+      }
+      resizePaintCanvas(boardW(), boardH(), shiftX, shiftY);
+      mapInner.style.width = boardW() + 'px';
+      mapInner.style.height = boardH() + 'px';
+
+      (state.map.images || []).forEach(clampImageToBoard);
+      renderMapImages();
+      renderMapLabels();
+      clampMapView();
+      applyMapTransform();
+      persist();
+      flashSaved();
+    };
+
+    if (!grow) {
+      showConfirm({
+        title: `Shrink the board from the ${dir}?`,
+        msg: 'Anything right at that edge may shift back into view. Everything else stays put.',
+        okLabel: 'Shrink board',
+        onConfirm: doResize,
+      });
+    } else {
+      doResize();
+    }
+  }
+
+  const resizeBtn = $('cv-map-resize-btn');
+  const resizePanel = $('cv-resize-panel');
+  resizeBtn.onclick = (e) => {
+    e.stopPropagation();
+    resizePanel.classList.toggle('show');
   };
+  document.addEventListener('click', (e) => {
+    if (resizePanel.classList.contains('show') && !e.target.closest('#cv-resize-panel') && !e.target.closest('#cv-map-resize-btn')) {
+      resizePanel.classList.remove('show');
+    }
+  });
+  resizePanel.querySelectorAll('.cv-resize-row').forEach(row => {
+    const dir = row.dataset.dir;
+    const amtInput = row.querySelector('.cv-resize-amt');
+    row.querySelector('.cv-resize-grow').onclick = () => resizeBoardEdge(dir, parseInt(amtInput.value, 10), true);
+    row.querySelector('.cv-resize-shrink').onclick = () => resizeBoardEdge(dir, parseInt(amtInput.value, 10), false);
+  });
 
   function clampImageToBoard(mi) {
     mi.w = Math.min(mi.w, boardW());
