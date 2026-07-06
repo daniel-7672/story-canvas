@@ -560,7 +560,6 @@
   }
   .cv-map-tool:hover { color: var(--text); border-color: var(--border); }
   .cv-map-tool.active { background: var(--wax-dim); color: #1C1A17; border-color: var(--wax-dim); font-weight: 600; }
-  #cv-map-custom-color { width: 26px; height: 26px; border: none; background: none; cursor: pointer; padding: 0; }
   #cv-map-size {
     width: 90px; accent-color: var(--wax-dim);
   }
@@ -1179,6 +1178,8 @@
         </div>
       </div>
       <input type="file" id="cv-map-img-input" accept="image/*" multiple style="display:none;">
+      <button class="cv-map-tool" id="cv-map-save-img" title="Download the current map as a picture">&#8659; Save image</button>
+      <button class="cv-map-tool" id="cv-map-copy-img" title="Copy the current map to your clipboard">&#128203; Copy image</button>
     </div>
     <div id="cv-map-wrap">
       <div id="cv-map-inner">
@@ -2894,8 +2895,13 @@
 
   const MAP_FIT_MARGIN = 0.93; // keeps a visible gap around the board at min zoom / on fit
 
+  let mapRectCache = null;
+  function getMapRect() {
+    return mapRectCache || mapWrap.getBoundingClientRect();
+  }
+
   function clampMapView() {
-    const r = mapWrap.getBoundingClientRect();
+    const r = getMapRect();
     if (!r.width || !r.height) return;
     const minS = Math.min(r.width / boardW(), r.height / boardH()) * MAP_FIT_MARGIN;
     if (mapVw.scale < minS) mapVw.scale = minS;
@@ -2913,7 +2919,7 @@
   }
 
   function mapScreenToWorld(clientX, clientY) {
-    const rect = mapWrap.getBoundingClientRect();
+    const rect = getMapRect();
     return {
       x: (clientX - rect.left - mapVw.x) / mapVw.scale,
       y: (clientY - rect.top - mapVw.y) / mapVw.scale,
@@ -3264,6 +3270,8 @@
     if (e.target.closest('#cv-label-toolbar') || e.target.closest('#cv-map-zoom') || e.target.closest('#cv-map-imgsel')) return;
     if (e.target.classList && e.target.classList.contains('cv-map-label')) return; // labels handle their own
 
+    mapRectCache = mapWrap.getBoundingClientRect(); // measured once; reused for the whole gesture below
+
     if (mapTool === 'paint' || mapTool === 'erase' || mapTool === 'age') {
       if (!mapCtx) return;
       pushUndo();
@@ -3360,6 +3368,7 @@
       mapPan = null;
       mapWrap.classList.remove('panning');
     }
+    mapRectCache = null;
   });
 
   function selectAllText(el) {
@@ -3737,6 +3746,77 @@
     $('cv-map-img-input').value = '';
   };
 
+  /* --- save / copy the current map as one flattened picture --- */
+  async function composeMapCanvas() {
+    const canvas = document.createElement('canvas');
+    canvas.width = boardW();
+    canvas.height = boardH();
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#211E1A';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const imgsInOrder = state.map.images || [];
+    for (const mi of imgsInOrder) {
+      let src = imageCache[mi.key];
+      if (!src) {
+        try { src = await idbGet('images', mi.key); } catch (e) { src = null; }
+      }
+      if (!src) continue;
+      await new Promise(resolve => {
+        const img = new Image();
+        img.onload = () => { ctx.drawImage(img, mi.x, mi.y, mi.w, mi.h); resolve(); };
+        img.onerror = () => resolve();
+        img.src = src;
+      });
+    }
+
+    if (mapCtx) ctx.drawImage(mapPaint, 0, 0);
+
+    (state.map.labels || []).forEach(lb => {
+      ctx.font = `600 ${lb.size}px Fraunces, serif`;
+      ctx.fillStyle = lb.color || '#E8E2D4';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(lb.text || '', lb.x + 6, lb.y + 2);
+    });
+
+    return canvas;
+  }
+
+  function mapCanvasToBlob(canvas) {
+    return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+  }
+
+  $('cv-map-save-img').onclick = async () => {
+    const canvas = await composeMapCanvas();
+    const blob = await mapCanvasToBlob(canvas);
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.download = `world-map-${stamp}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    flashSaved();
+  };
+
+  $('cv-map-copy-img').onclick = async () => {
+    const canvas = await composeMapCanvas();
+    const blob = await mapCanvasToBlob(canvas);
+    if (!blob) return;
+    try {
+      if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+      await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+      flashSaved();
+    } catch (e) {
+      showConfirm({
+        title: "Couldn't copy to clipboard",
+        msg: "Your browser blocked copying images this way. Try 'Save image' instead and attach the file directly.",
+        okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+      });
+    }
+  };
+
   // paste images while the map is open -> add them to the map
   window.addEventListener('paste', (e) => {
     if (!mapView.classList.contains('open')) return;
@@ -3772,9 +3852,13 @@
   let tlLoaded = false;
   let tlEventDrag = null;
   let activeTlEventId = null;
+  let tlRectCache = null;
+  function getTlRect() {
+    return tlRectCache || timelineWrap.getBoundingClientRect();
+  }
 
   function tlClampView() {
-    const r = timelineWrap.getBoundingClientRect();
+    const r = getTlRect();
     if (!r.width || !r.height) return;
     const minS = Math.min(r.width / TL_W, r.height / TL_H) * MAP_FIT_MARGIN;
     if (tlVw.scale < minS) tlVw.scale = minS;
@@ -3794,7 +3878,7 @@
     renderTimelineRuler();
   }
   function tlScreenToWorld(clientX, clientY) {
-    const rect = timelineWrap.getBoundingClientRect();
+    const rect = getTlRect();
     return {
       x: (clientX - rect.left - tlVw.x) / tlVw.scale,
       y: (clientY - rect.top - tlVw.y) / tlVw.scale,
@@ -3925,12 +4009,13 @@
 
   timelineWrap.addEventListener('pointerdown', (e) => {
     if (e.target.closest('.cv-tl-event') || e.target.closest('#cv-timeline-zoom')) return;
+    tlRectCache = timelineWrap.getBoundingClientRect();
     tlPan = { sx: e.clientX, sy: e.clientY, ox: tlVw.x, oy: tlVw.y };
     timelineWrap.classList.add('panning');
   });
   window.addEventListener('pointermove', (e) => {
     if (tlPan) {
-      const r = timelineWrap.getBoundingClientRect();
+      const r = getTlRect();
       const w = TL_W * tlVw.scale;
       if (w > r.width) tlVw.x = tlPan.ox + (e.clientX - tlPan.sx);
       tlClampView();
@@ -3939,6 +4024,7 @@
   });
   window.addEventListener('pointerup', () => {
     if (tlPan) { tlPan = null; timelineWrap.classList.remove('panning'); }
+    tlRectCache = null;
   });
 
   function currentTlEvents() { return state.timeline.events; }
