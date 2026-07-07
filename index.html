@@ -784,6 +784,7 @@
   .cv-tl-event.active { transform: translate(-50%, -50%) scale(1.22); z-index: 6; }
   .cv-tl-event.dragging { cursor: grabbing; z-index: 10; }
   .cv-tl-dot {
+    position: relative;
     width: 16px; height: 16px; border-radius: 50%;
     background: var(--wax-dim); border: 2px solid var(--bg);
     box-shadow: 0 0 0 2px var(--wax-dim);
@@ -791,7 +792,14 @@
     display: block;
   }
   .cv-tl-event:hover .cv-tl-dot, .cv-tl-event.active .cv-tl-dot { transform: scale(1.25); }
-  .cv-tl-event.locked .cv-tl-dot { box-shadow: 0 0 0 2px var(--text-faint); background: var(--text-faint); }
+  .cv-tl-lock-badge {
+    position: absolute; top: -5px; right: -6px;
+    width: 13px; height: 13px; border-radius: 50%;
+    background: var(--bg); border: 1px solid var(--text-faint);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7.5px; line-height: 1;
+    pointer-events: none;
+  }
   .cv-tl-label {
     position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
     margin-bottom: 8px;
@@ -4052,9 +4060,14 @@
         dot.className = 'cv-tl-dot';
         dot.style.width = dotSize + 'px';
         dot.style.height = dotSize + 'px';
-        if (!ev.locked) {
-          dot.style.background = ev.color;
-          dot.style.boxShadow = `0 0 0 2px ${ev.color}`;
+        dot.style.background = ev.color;
+        dot.style.boxShadow = `0 0 0 2px ${ev.color}`;
+        if (ev.locked) {
+          const lockBadge = document.createElement('div');
+          lockBadge.className = 'cv-tl-lock-badge';
+          lockBadge.textContent = '\u{1F512}';
+          lockBadge.title = 'Locked';
+          dot.appendChild(lockBadge);
         }
         const label = document.createElement('div');
         label.className = 'cv-tl-label';
