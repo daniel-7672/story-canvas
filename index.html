@@ -566,7 +566,6 @@
   #cv-map-wrap {
     flex: 1; position: relative; overflow: hidden; cursor: grab;
   }
-  #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: crosshair; }
   #cv-map-wrap.tool-label { cursor: text; }
   #cv-map-wrap.panning { cursor: grabbing; }
   #cv-map-inner {
@@ -661,10 +660,19 @@
   #cv-map-wrap.tool-paint, #cv-map-wrap.tool-erase { cursor: none; }
   #cv-map-wrap.tool-fill { cursor: cell; }
   #cv-map-wrap.tool-pick { cursor: crosshair; }
-  #cv-map-wrap.tool-age { cursor: none; }
 
   /* ---------- MAP IMAGES ---------- */
   #cv-map-images { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  #cv-map-grid {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; display: none;
+    background-image:
+      linear-gradient(to right, rgba(232,226,212,0.09) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(232,226,212,0.09) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  #cv-map-grid.show { display: block; }
+  #cv-map-grid-btn.active { color: var(--wax); border-color: var(--wax-dim); }
   .cv-map-img { position: absolute; user-select: none; }
   .cv-map-img img { width: 100%; height: 100%; display: block; pointer-events: none; }
   #cv-map-imgsel {
@@ -689,9 +697,10 @@
   #cv-map-custom-color { width: 34px; height: 30px; border: 1px solid var(--border-soft); border-radius: 5px; background: var(--surface); cursor: pointer; padding: 2px; }
 
   .cv-shape-mode-group {
-    display: flex; gap: 2px;
+    display: none; gap: 2px;
     background: var(--surface); border: 1px solid var(--border-soft); border-radius: 5px; padding: 2px;
   }
+  .cv-shape-mode-group.show { display: flex; }
   .cv-shape-mode {
     font-family: 'JetBrains Mono', monospace; font-size: 10px;
     background: transparent; color: var(--text-faint); border: none; border-radius: 3px;
@@ -700,7 +709,10 @@
   .cv-shape-mode:hover { color: var(--text); }
   .cv-shape-mode.active { background: var(--wax-dim); color: #1C1A17; font-weight: 600; }
 
-  #cv-map-wrap.tool-lockarea, #cv-map-wrap.tool-selecterase { cursor: crosshair; }
+  #cv-map-wrap.tool-paint.mode-freehand, #cv-map-wrap.tool-erase.mode-freehand { cursor: none; }
+  #cv-map-wrap.tool-paint.mode-line, #cv-map-wrap.tool-paint.mode-circle,
+  #cv-map-wrap.tool-erase.mode-area,
+  #cv-map-wrap.tool-lockarea.mode-lock, #cv-map-wrap.tool-lockarea.mode-unlock { cursor: crosshair; }
 
   #cv-map-selectbox {
     position: absolute; display: none;
@@ -1014,15 +1026,6 @@
     padding: 6px; border-radius: 4px; cursor: pointer;
   }
   #cv-axis-newlayer:hover { color: var(--wax); border-color: var(--wax-dim); }
-  #cv-age-strength-wrap {
-    display: flex; align-items: center; gap: 5px;
-    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 5px;
-    padding: 4px 8px;
-  }
-  .cv-age-label {
-    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-faint); white-space: nowrap;
-  }
-  #cv-map-age-strength { width: 70px; accent-color: #8B6F4E; }
 
   /* ---------- LIGHTBOX ---------- */
   #cv-lightbox {
@@ -1202,23 +1205,31 @@
       <button class="cv-back-btn" id="cv-map-back">&larr; Back</button>
       <button class="cv-map-tool active" data-tool="move" title="Pan the map / drag images and labels">&#10021; Move</button>
       <button class="cv-map-tool" data-tool="paint" title="Paint on the map">&#128396; Paint</button>
+      <span class="cv-shape-mode-group" id="cv-paint-mode-group">
+        <button class="cv-shape-mode active" data-drawmode="freehand" title="Freehand brush">&#9998; Freehand</button>
+        <button class="cv-shape-mode" data-drawmode="line" title="Click and drag to draw a straight line">&#128207; Line</button>
+        <button class="cv-shape-mode" data-drawmode="circle" title="Click a center point and drag out a circle">&#9711; Circle</button>
+      </span>
       <button class="cv-map-tool" data-tool="fill" title="Fill an enclosed area with the current color">&#129529; Fill</button>
       <button class="cv-map-tool" data-tool="pick" title="Click any painted spot to reuse its exact color">&#128167; Pick color</button>
-      <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
-      <button class="cv-map-tool" data-tool="age" title="Paint an aged, weathered look directly onto the map -- builds up the more you go over it">&#127756; Age</button>
+      <button class="cv-map-tool" data-tool="erase" title="Erase paint, freehand or by selecting a whole area">&#9003; Erase</button>
+      <span class="cv-shape-mode-group" id="cv-erase-mode-group">
+        <button class="cv-shape-mode active" data-erasemode="freehand" title="Freehand eraser">&#9998; Freehand</button>
+        <button class="cv-shape-mode" data-erasemode="area" title="Draw a shape and erase everything inside it">&#9633; Area</button>
+      </span>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
-      <button class="cv-map-tool" data-tool="lockarea" title="Draw a shape to protect that area from paint/erase/age -- click an existing locked shape to remove it">&#128274; Lock area</button>
-      <button class="cv-map-tool" data-tool="selecterase" title="Draw a shape to erase everything painted inside it">&#9003;&#9633; Erase area</button>
-      <span class="cv-shape-mode-group" title="How the next shape you draw is made">
+      <button class="cv-map-tool" data-tool="lockarea" title="Protect an area from paint/erase, or unlock one you made earlier">&#128274; Lock</button>
+      <span class="cv-shape-mode-group" id="cv-lock-mode-group">
+        <button class="cv-shape-mode active" data-lockmode="lock" title="Draw a shape to protect that area">&#128274; Lock</button>
+        <button class="cv-shape-mode" data-lockmode="unlock" title="Click a protected area to remove the lock">&#128275; Unlock</button>
+      </span>
+      <span class="cv-shape-mode-group" id="cv-shape-mode-group" title="How the next shape you draw is made">
         <button class="cv-shape-mode active" data-shape="rect">&#9633; Rect</button>
         <button class="cv-shape-mode" data-shape="freeform">&#9998; Freeform</button>
       </span>
       <input type="color" id="cv-map-custom-color" value="#7A8471" title="Brush color">
       <input type="range" id="cv-map-size" min="2" max="80" value="10" title="Brush size">
-      <span id="cv-age-strength-wrap" title="How strong each pass of the Age brush is">
-        <span class="cv-age-label">Age strength</span>
-        <input type="range" id="cv-map-age-strength" min="5" max="100" value="35">
-      </span>
+      <button class="cv-map-tool" id="cv-map-grid-btn" title="Toggle a small measurement grid overlay">&#9638; Grid</button>
       <button class="cv-map-tool" id="cv-map-undo" title="Undo last stroke">&#8630; Undo</button>
       <button class="cv-map-tool" id="cv-map-redo" title="Redo">&#8631; Redo</button>
       <span class="spacer"></span>
@@ -1242,6 +1253,7 @@
         <div id="cv-map-images"></div>
         <canvas id="cv-map-paint" width="2400" height="1600"></canvas>
         <div id="cv-map-labels"></div>
+        <div id="cv-map-grid"></div>
         <div id="cv-map-imgsel">
           <button id="cv-map-imgdel" title="Remove this image (drawings stay)">&#x2715;</button>
           <div id="cv-map-imgresize"></div>
@@ -1536,6 +1548,7 @@
     if (typeof state.map.w !== 'number') state.map.w = 3600;
     if (typeof state.map.h !== 'number') state.map.h = 1300;
     if (!Array.isArray(state.map.lockedRegions)) state.map.lockedRegions = [];
+    if (typeof state.map.gridOn !== 'boolean') state.map.gridOn = false;
     if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
     if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
     if (!state.timeline.axis || typeof state.timeline.axis !== 'object') state.timeline.axis = { start: 0, end: 1000, unit: '' };
@@ -1845,6 +1858,7 @@
           if (!Array.isArray(state.map.labels)) state.map.labels = [];
           if (!Array.isArray(state.map.images)) state.map.images = [];
           if (!Array.isArray(state.map.lockedRegions)) state.map.lockedRegions = [];
+          if (typeof state.map.gridOn !== 'boolean') state.map.gridOn = false;
           if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
           if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
           if (!state.timeline.axis || typeof state.timeline.axis !== 'object') state.timeline.axis = { start: 0, end: 1000, unit: '' };
@@ -2945,7 +2959,11 @@
   let mapTool = 'move';
   let mapColor = '#7A8471';
   let mapBrush = 10;
-  let ageStrength = 35;
+  let paintDrawMode = 'freehand';
+  let eraseSubMode = 'freehand';
+  let lockSubMode = 'lock';
+  let lineStart = null;
+  let circleStart = null;
   let mapVw = { x: 0, y: 0, scale: 0.4 };
   let mapPan = null;
   let painting = false;
@@ -2966,7 +2984,6 @@
   let paintClipActive = false;
 
   $('cv-map-custom-color').oninput = (e) => { mapColor = e.target.value; };
-  $('cv-map-age-strength').oninput = (e) => { ageStrength = parseInt(e.target.value, 10); };
   $('cv-map-size').oninput = (e) => {
     mapBrush = parseInt(e.target.value, 10);
     updateBrushCursor();
@@ -3016,6 +3033,21 @@
     applyMapTransform();
   }
 
+  function currentSubMode() {
+    if (mapTool === 'paint') return paintDrawMode;
+    if (mapTool === 'erase') return eraseSubMode;
+    if (mapTool === 'lockarea') return lockSubMode;
+    return null;
+  }
+
+  function updateToolModeVisibility() {
+    $('cv-paint-mode-group').classList.toggle('show', mapTool === 'paint');
+    $('cv-erase-mode-group').classList.toggle('show', mapTool === 'erase');
+    $('cv-lock-mode-group').classList.toggle('show', mapTool === 'lockarea');
+    const showShapeMode = (mapTool === 'lockarea' && lockSubMode === 'lock') || (mapTool === 'erase' && eraseSubMode === 'area');
+    $('cv-shape-mode-group').classList.toggle('show', showShapeMode);
+  }
+
   function setMapTool(tool) {
     mapTool = tool;
     document.querySelectorAll('.cv-map-tool[data-tool]').forEach(b => {
@@ -3024,15 +3056,42 @@
     mapWrap.className = '';
     mapWrap.id = 'cv-map-wrap';
     mapWrap.classList.add('tool-' + tool);
+    const sub = currentSubMode();
+    if (sub) mapWrap.classList.add('mode-' + sub);
     hideLabelToolbar();
     hideImgSel();
     cancelInProgressSelection();
-    if (tool !== 'paint' && tool !== 'erase' && tool !== 'age') brushCursor.style.display = 'none';
-    else updateBrushCursor();
+    updateToolModeVisibility();
+    renderLockRegions(); // self-guards: only actually shows outlines while in Unlock mode
+    if (!sub || sub === 'freehand') updateBrushCursor();
+    else brushCursor.style.display = 'none';
   }
   document.querySelectorAll('.cv-map-tool[data-tool]').forEach(b => {
     b.onclick = () => setMapTool(b.dataset.tool);
   });
+
+  function wireSubModeGroup(groupId, dataAttr, targetSetter, onChange) {
+    document.querySelectorAll(`#${groupId} .cv-shape-mode`).forEach(btn => {
+      btn.onclick = () => {
+        targetSetter(btn.dataset[dataAttr]);
+        document.querySelectorAll(`#${groupId} .cv-shape-mode`).forEach(b => b.classList.toggle('active', b === btn));
+        if (onChange) onChange();
+      };
+    });
+  }
+  wireSubModeGroup('cv-paint-mode-group', 'drawmode', (v) => { paintDrawMode = v; }, () => setMapTool('paint'));
+  wireSubModeGroup('cv-erase-mode-group', 'erasemode', (v) => { eraseSubMode = v; }, () => setMapTool('erase'));
+  wireSubModeGroup('cv-lock-mode-group', 'lockmode', (v) => { lockSubMode = v; }, () => setMapTool('lockarea'));
+  wireSubModeGroup('cv-shape-mode-group', 'shape', (v) => { selectShapeMode = v; }, () => cancelInProgressSelection());
+
+  const mapGridEl = $('cv-map-grid');
+  const gridBtn = $('cv-map-grid-btn');
+  gridBtn.onclick = () => {
+    state.map.gridOn = !state.map.gridOn;
+    mapGridEl.classList.toggle('show', state.map.gridOn);
+    gridBtn.classList.toggle('active', state.map.gridOn);
+    persist();
+  };
 
   async function openMap() {
     mapView.classList.add('open');
@@ -3066,6 +3125,8 @@
     renderMapImages();
     renderMapLabels();
     renderLockRegions();
+    mapGridEl.classList.toggle('show', !!state.map.gridOn);
+    gridBtn.classList.toggle('active', !!state.map.gridOn);
     setTimeout(fitMapToScreen, 30);
   }
 
@@ -3197,11 +3258,6 @@
 
   function strokeTo(pt) {
     if (!mapCtx || !lastPt) return;
-    if (mapTool === 'age') {
-      ageStrokeTo(pt);
-      lastPt = pt;
-      return;
-    }
     mapCtx.lineCap = 'round';
     mapCtx.lineJoin = 'round';
     mapCtx.lineWidth = mapBrush;
@@ -3219,35 +3275,34 @@
     lastPt = pt;
   }
 
-  const AGE_TONES = ['101,74,44', '84,58,32', '120,92,55']; // warm sepia/umber browns
-  function ageStrokeTo(pt) {
-    // Lays down soft, irregular warm-toned blotches with a multiply blend, so it darkens and
-    // "weathers" whatever's already there (paint or a reference image) instead of painting flat
-    // new color over it. Builds up gradually the more you go over an area, like real staining.
-    const dx = pt.x - lastPt.x, dy = pt.y - lastPt.y;
-    const dist = Math.hypot(dx, dy);
-    const step = Math.max(1, mapBrush * 0.35);
-    const steps = Math.max(1, Math.round(dist / step));
-    const baseAlpha = (ageStrength / 100) * 0.16;
-    mapCtx.globalCompositeOperation = 'multiply';
-    for (let i = 1; i <= steps; i++) {
-      const t = i / steps;
-      const px = lastPt.x + dx * t, py = lastPt.y + dy * t;
-      const jitter = mapBrush * 0.4;
-      const ox = (Math.random() - 0.5) * jitter;
-      const oy = (Math.random() - 0.5) * jitter;
-      const radius = (mapBrush / 2) * (0.8 + Math.random() * 0.7);
-      const tone = AGE_TONES[Math.floor(Math.random() * AGE_TONES.length)];
-      const alpha = baseAlpha * (0.6 + Math.random() * 0.6);
-      const grad = mapCtx.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, radius);
-      grad.addColorStop(0, `rgba(${tone},${alpha.toFixed(3)})`);
-      grad.addColorStop(1, `rgba(${tone},0)`);
-      mapCtx.fillStyle = grad;
-      mapCtx.beginPath();
-      mapCtx.arc(px + ox, py + oy, radius, 0, Math.PI * 2);
-      mapCtx.fill();
-    }
+  function finalizeLine(start, end) {
+    if (!mapCtx) return;
+    pushUndo();
+    const clipped = beginLockExclusionClip();
+    mapCtx.lineCap = 'round';
+    mapCtx.lineWidth = mapBrush;
+    mapCtx.strokeStyle = mapColor;
     mapCtx.globalCompositeOperation = 'source-over';
+    mapCtx.beginPath();
+    mapCtx.moveTo(start.x, start.y);
+    mapCtx.lineTo(end.x, end.y);
+    mapCtx.stroke();
+    if (clipped) mapCtx.restore();
+    schedulePaintSave();
+  }
+
+  function finalizeCircle(center, radius) {
+    if (!mapCtx || radius < 1) return;
+    pushUndo();
+    const clipped = beginLockExclusionClip();
+    mapCtx.lineWidth = mapBrush;
+    mapCtx.strokeStyle = mapColor;
+    mapCtx.globalCompositeOperation = 'source-over';
+    mapCtx.beginPath();
+    mapCtx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+    mapCtx.stroke();
+    if (clipped) mapCtx.restore();
+    schedulePaintSave();
   }
 
   function floodFillAt(worldX, worldY, fillHex, tolerance) {
@@ -3383,6 +3438,7 @@
 
   function renderLockRegions() {
     lockRegionsSvg.innerHTML = '';
+    if (!(mapTool === 'lockarea' && lockSubMode === 'unlock')) return; // invisible outside Unlock mode
     (state.map.lockedRegions || []).forEach(r => {
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
       let d;
@@ -3435,6 +3491,8 @@
     freeformPoints = [];
     freeformPreviewPt = null;
     rectSelectStart = null;
+    lineStart = null;
+    circleStart = null;
     renderFreeformPreview();
     updateSelectionControls();
     hideSelectBoxPreview();
@@ -3444,9 +3502,8 @@
     if (mapTool === 'lockarea') {
       state.map.lockedRegions.push(shape);
       persist();
-      renderLockRegions();
-      flashSaved();
-    } else if (mapTool === 'selecterase') {
+      flashSaved(); // stays invisible -- outlines only ever show while actively in Unlock mode
+    } else if (mapTool === 'erase' && eraseSubMode === 'area') {
       pushUndo();
       mapCtx.save();
       mapCtx.beginPath();
@@ -3459,13 +3516,6 @@
     }
   }
 
-  document.querySelectorAll('.cv-shape-mode').forEach(btn => {
-    btn.onclick = () => {
-      selectShapeMode = btn.dataset.shape;
-      document.querySelectorAll('.cv-shape-mode').forEach(b => b.classList.toggle('active', b === btn));
-      cancelInProgressSelection();
-    };
-  });
   selectionFinishBtn.onclick = () => {
     if (freeformPoints.length < 3) return;
     finalizeSelectionShape({ id: uid('lockregion'), type: 'poly', points: freeformPoints.slice() });
@@ -3479,7 +3529,7 @@
 
     mapRectCache = mapWrap.getBoundingClientRect(); // measured once; reused for the whole gesture below
 
-    if (mapTool === 'paint' || mapTool === 'erase' || mapTool === 'age') {
+    if ((mapTool === 'paint' && paintDrawMode === 'freehand') || (mapTool === 'erase' && eraseSubMode === 'freehand')) {
       if (!mapCtx) return;
       pushUndo();
       painting = true;
@@ -3487,6 +3537,12 @@
       lastPt = mapScreenToWorld(e.clientX, e.clientY);
       // draw a dot for single clicks
       strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
+      e.preventDefault();
+    } else if (mapTool === 'paint' && paintDrawMode === 'line') {
+      lineStart = mapScreenToWorld(e.clientX, e.clientY);
+      e.preventDefault();
+    } else if (mapTool === 'paint' && paintDrawMode === 'circle') {
+      circleStart = mapScreenToWorld(e.clientX, e.clientY);
       e.preventDefault();
     } else if (mapTool === 'fill') {
       if (!mapCtx) return;
@@ -3507,7 +3563,17 @@
       }
       setMapTool('paint');
       e.preventDefault();
-    } else if (mapTool === 'lockarea' || mapTool === 'selecterase') {
+    } else if (mapTool === 'lockarea' && lockSubMode === 'unlock') {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const hit = hitTestLockedRegion(p);
+      if (hit) {
+        state.map.lockedRegions = state.map.lockedRegions.filter(r => r.id !== hit.id);
+        persist();
+        renderLockRegions(); // still in Unlock mode: re-render so remaining outlines stay visible
+        flashSaved();
+      }
+      e.preventDefault();
+    } else if ((mapTool === 'lockarea' && lockSubMode === 'lock') || (mapTool === 'erase' && eraseSubMode === 'area')) {
       const p = mapScreenToWorld(e.clientX, e.clientY);
       if (selectShapeMode === 'freeform') {
         freeformPoints.push(p);
@@ -3515,9 +3581,7 @@
         renderFreeformPreview();
         updateSelectionControls();
       } else {
-        // rect mode: a plain click (no drag) on an existing locked shape removes it
-        const existing = mapTool === 'lockarea' ? hitTestLockedRegion(p) : null;
-        rectSelectStart = { world: p, screenX: e.clientX, screenY: e.clientY, moved: false, existing };
+        rectSelectStart = { world: p, screenX: e.clientX, screenY: e.clientY, moved: false };
       }
       e.preventDefault();
     } else if (mapTool === 'label') {
@@ -3575,6 +3639,23 @@
       const dx = e.clientX - rectSelectStart.screenX, dy = e.clientY - rectSelectStart.screenY;
       if (Math.abs(dx) > 3 || Math.abs(dy) > 3) rectSelectStart.moved = true;
       updateSelectBoxPreview(rectSelectStart.world, p);
+    } else if (lineStart) {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      selectSvg.innerHTML = '';
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${lineStart.x} ${lineStart.y} L ${p.x} ${p.y}`);
+      path.setAttribute('class', 'cv-selection-path');
+      selectSvg.appendChild(path);
+    } else if (circleStart) {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const r = Math.hypot(p.x - circleStart.x, p.y - circleStart.y);
+      selectSvg.innerHTML = '';
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', circleStart.x);
+      circle.setAttribute('cy', circleStart.y);
+      circle.setAttribute('r', r);
+      circle.setAttribute('class', 'cv-selection-path');
+      selectSvg.appendChild(circle);
     }
   });
 
@@ -3602,14 +3683,7 @@
       const start = rectSelectStart;
       rectSelectStart = null;
       hideSelectBoxPreview();
-      if (!start.moved) {
-        // a plain click: remove the locked shape under it, if any (Lock tool only)
-        if (start.existing) {
-          state.map.lockedRegions = state.map.lockedRegions.filter(r => r.id !== start.existing.id);
-          persist();
-          renderLockRegions();
-        }
-      } else {
+      if (start.moved) {
         const p = mapScreenToWorld(e.clientX, e.clientY);
         const x = Math.min(start.world.x, p.x), y = Math.min(start.world.y, p.y);
         const w = Math.abs(p.x - start.world.x), h = Math.abs(p.y - start.world.y);
@@ -3617,6 +3691,19 @@
           finalizeSelectionShape({ id: uid('lockregion'), type: 'rect', x, y, w, h });
         }
       }
+    }
+    if (lineStart) {
+      const end = mapScreenToWorld(e.clientX, e.clientY);
+      selectSvg.innerHTML = '';
+      finalizeLine(lineStart, end);
+      lineStart = null;
+    }
+    if (circleStart) {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const r = Math.hypot(p.x - circleStart.x, p.y - circleStart.y);
+      selectSvg.innerHTML = '';
+      finalizeCircle(circleStart, r);
+      circleStart = null;
     }
     mapRectCache = null;
   });
