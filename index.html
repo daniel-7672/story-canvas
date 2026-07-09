@@ -604,6 +604,7 @@
     font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 3px 6px; border-radius: 3px;
   }
   #cv-label-toolbar button:hover { background: var(--surface); color: var(--text); }
+  #cv-lbl-lock.active { color: var(--wax); }
   #cv-lbl-color-wheel { width: 22px; height: 22px; border: none; background: none; cursor: pointer; padding: 0; }
   #cv-map-zoom {
     position: absolute; bottom: 14px; left: 14px; z-index: 10;
@@ -686,6 +687,55 @@
     cursor: nwse-resize; pointer-events: auto;
   }
   #cv-map-custom-color { width: 34px; height: 30px; border: 1px solid var(--border-soft); border-radius: 5px; background: var(--surface); cursor: pointer; padding: 2px; }
+
+  .cv-shape-mode-group {
+    display: flex; gap: 2px;
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 5px; padding: 2px;
+  }
+  .cv-shape-mode {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px;
+    background: transparent; color: var(--text-faint); border: none; border-radius: 3px;
+    padding: 5px 8px; cursor: pointer;
+  }
+  .cv-shape-mode:hover { color: var(--text); }
+  .cv-shape-mode.active { background: var(--wax-dim); color: #1C1A17; font-weight: 600; }
+
+  #cv-map-wrap.tool-lockarea, #cv-map-wrap.tool-selecterase { cursor: crosshair; }
+
+  #cv-map-selectbox {
+    position: absolute; display: none;
+    border: 2px dashed #5F9EA0;
+    background: rgba(95,158,160,0.08);
+    pointer-events: none; z-index: 16;
+  }
+  #cv-map-selectbox.show { display: block; }
+  #cv-map-selectsvg, #cv-map-lockregions-svg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; overflow: visible; z-index: 14;
+  }
+  .cv-selection-path { fill: rgba(95,158,160,0.1); stroke: #5F9EA0; stroke-width: 2; stroke-dasharray: 6 4; }
+  .cv-lockregion-path { fill: rgba(201,97,61,0.05); stroke: var(--wax-dim); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.6; }
+
+  #cv-selection-controls {
+    display: none;
+    position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); z-index: 20;
+    align-items: center; gap: 8px;
+    background: var(--surface-hi); border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+  }
+  #cv-selection-controls.show { display: flex; }
+  #cv-selection-hint {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-faint); white-space: nowrap;
+  }
+  #cv-selection-controls button {
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    border-radius: 4px; padding: 6px 10px; cursor: pointer; border: none;
+  }
+  #cv-selection-finish { background: var(--wax-dim); color: #1C1A17; font-weight: 600; }
+  #cv-selection-finish:hover { background: var(--wax); }
+  #cv-selection-finish:disabled { opacity: 0.4; cursor: not-allowed; }
+  #cv-selection-cancel { background: var(--surface); color: var(--text-dim); }
+  #cv-selection-cancel:hover { color: var(--text); }
 
   .cv-resize-wrap { position: relative; }
   #cv-resize-panel {
@@ -792,14 +842,6 @@
     display: block;
   }
   .cv-tl-event:hover .cv-tl-dot, .cv-tl-event.active .cv-tl-dot { transform: scale(1.25); }
-  .cv-tl-lock-badge {
-    position: absolute; top: -5px; right: -6px;
-    width: 13px; height: 13px; border-radius: 50%;
-    background: var(--bg); border: 1px solid var(--text-faint);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 7.5px; line-height: 1;
-    pointer-events: none;
-  }
   .cv-tl-label {
     position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
     margin-bottom: 8px;
@@ -1165,6 +1207,12 @@
       <button class="cv-map-tool" data-tool="erase" title="Erase paint">&#9003; Erase</button>
       <button class="cv-map-tool" data-tool="age" title="Paint an aged, weathered look directly onto the map -- builds up the more you go over it">&#127756; Age</button>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
+      <button class="cv-map-tool" data-tool="lockarea" title="Draw a shape to protect that area from paint/erase/age -- click an existing locked shape to remove it">&#128274; Lock area</button>
+      <button class="cv-map-tool" data-tool="selecterase" title="Draw a shape to erase everything painted inside it">&#9003;&#9633; Erase area</button>
+      <span class="cv-shape-mode-group" title="How the next shape you draw is made">
+        <button class="cv-shape-mode active" data-shape="rect">&#9633; Rect</button>
+        <button class="cv-shape-mode" data-shape="freeform">&#9998; Freeform</button>
+      </span>
       <input type="color" id="cv-map-custom-color" value="#7A8471" title="Brush color">
       <input type="range" id="cv-map-size" min="2" max="80" value="10" title="Brush size">
       <span id="cv-age-strength-wrap" title="How strong each pass of the Age brush is">
@@ -1198,12 +1246,21 @@
           <button id="cv-map-imgdel" title="Remove this image (drawings stay)">&#x2715;</button>
           <div id="cv-map-imgresize"></div>
         </div>
+        <div id="cv-map-selectbox"></div>
+        <svg id="cv-map-selectsvg"></svg>
+        <svg id="cv-map-lockregions-svg"></svg>
       </div>
       <div id="cv-brush-cursor"></div>
+      <div id="cv-selection-controls">
+        <span id="cv-selection-hint">Click points to trace a shape</span>
+        <button id="cv-selection-finish">&#10003; Finish</button>
+        <button id="cv-selection-cancel">&#x2715; Cancel</button>
+      </div>
       <div id="cv-label-toolbar">
         <button id="cv-lbl-smaller" title="Smaller">A-</button>
         <button id="cv-lbl-bigger" title="Bigger">A+</button>
         <input type="color" id="cv-lbl-color-wheel" value="#E8E2D4" title="Label color">
+        <button id="cv-lbl-lock" title="Lock so this label can't be dragged by accident">&#128275;</button>
         <button id="cv-lbl-delete" title="Delete label">&#x2715;</button>
       </div>
       <div id="cv-map-zoom">
@@ -1478,6 +1535,7 @@
     if (!Array.isArray(state.map.images)) state.map.images = [];
     if (typeof state.map.w !== 'number') state.map.w = 3600;
     if (typeof state.map.h !== 'number') state.map.h = 1300;
+    if (!Array.isArray(state.map.lockedRegions)) state.map.lockedRegions = [];
     if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
     if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
     if (!state.timeline.axis || typeof state.timeline.axis !== 'object') state.timeline.axis = { start: 0, end: 1000, unit: '' };
@@ -1786,7 +1844,8 @@
           if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
           if (!Array.isArray(state.map.labels)) state.map.labels = [];
           if (!Array.isArray(state.map.images)) state.map.images = [];
-                if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
+          if (!Array.isArray(state.map.lockedRegions)) state.map.lockedRegions = [];
+          if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
           if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
           if (!state.timeline.axis || typeof state.timeline.axis !== 'object') state.timeline.axis = { start: 0, end: 1000, unit: '' };
           if (!state.timeline.bookendStart) state.timeline.bookendStart = { title: '', caption: '' };
@@ -2852,6 +2911,13 @@
   const labelToolbar = $('cv-label-toolbar');
   const mapZoomPct = $('cv-map-zoom-pct');
   const imgSel = $('cv-map-imgsel');
+  const selectBoxEl = $('cv-map-selectbox');
+  const selectSvg = $('cv-map-selectsvg');
+  const lockRegionsSvg = $('cv-map-lockregions-svg');
+  const selectionControls = $('cv-selection-controls');
+  const selectionFinishBtn = $('cv-selection-finish');
+  const selectionCancelBtn = $('cv-selection-cancel');
+  const selectionHintEl = $('cv-selection-hint');
   const brushCursor = $('cv-brush-cursor');
 
   const MAP_DEFAULT_W = 3600, MAP_DEFAULT_H = 1300;
@@ -2893,6 +2959,11 @@
   let mapImgDrag = null;
   let mapImgResize = null;
   let lastBrushPos = null;
+  let selectShapeMode = 'rect';
+  let rectSelectStart = null;
+  let freeformPoints = [];
+  let freeformPreviewPt = null;
+  let paintClipActive = false;
 
   $('cv-map-custom-color').oninput = (e) => { mapColor = e.target.value; };
   $('cv-map-age-strength').oninput = (e) => { ageStrength = parseInt(e.target.value, 10); };
@@ -2955,6 +3026,7 @@
     mapWrap.classList.add('tool-' + tool);
     hideLabelToolbar();
     hideImgSel();
+    cancelInProgressSelection();
     if (tool !== 'paint' && tool !== 'erase' && tool !== 'age') brushCursor.style.display = 'none';
     else updateBrushCursor();
   }
@@ -2993,6 +3065,7 @@
     }
     renderMapImages();
     renderMapLabels();
+    renderLockRegions();
     setTimeout(fitMapToScreen, 30);
   }
 
@@ -3008,6 +3081,7 @@
   function closeMap() {
     hideLabelToolbar();
     hideImgSel();
+    cancelInProgressSelection();
     brushCursor.style.display = 'none';
     mapView.classList.remove('open');
   }
@@ -3079,7 +3153,7 @@
   function pushUndo() {
     if (!mapCtx) return;
     try {
-      undoStack.push(mapPaint.toDataURL());
+      undoStack.push(mapCtx.getImageData(0, 0, mapPaint.width, mapPaint.height));
       if (undoStack.length > 15) undoStack.shift();
       redoStack = []; // a new action invalidates the redo history
     } catch (e) {}
@@ -3088,31 +3162,21 @@
   $('cv-map-undo').onclick = () => {
     if (!mapCtx || !undoStack.length) return;
     let current = null;
-    try { current = mapPaint.toDataURL(); } catch (e) {}
+    try { current = mapCtx.getImageData(0, 0, mapPaint.width, mapPaint.height); } catch (e) {}
     const prev = undoStack.pop();
-    const img = new Image();
-    img.onload = () => {
-      if (current) redoStack.push(current);
-      mapCtx.clearRect(0, 0, boardW(), boardH());
-      mapCtx.drawImage(img, 0, 0);
-      schedulePaintSave();
-    };
-    img.src = prev;
+    if (current) redoStack.push(current);
+    mapCtx.putImageData(prev, 0, 0); // synchronous -- no race even on rapid clicks
+    schedulePaintSave();
   };
 
   $('cv-map-redo').onclick = () => {
     if (!mapCtx || !redoStack.length) return;
     let current = null;
-    try { current = mapPaint.toDataURL(); } catch (e) {}
+    try { current = mapCtx.getImageData(0, 0, mapPaint.width, mapPaint.height); } catch (e) {}
     const next = redoStack.pop();
-    const img = new Image();
-    img.onload = () => {
-      if (current) undoStack.push(current);
-      mapCtx.clearRect(0, 0, boardW(), boardH());
-      mapCtx.drawImage(img, 0, 0);
-      schedulePaintSave();
-    };
-    img.src = next;
+    if (current) undoStack.push(current);
+    mapCtx.putImageData(next, 0, 0); // synchronous -- no race even on rapid clicks
+    schedulePaintSave();
   };
 
   function schedulePaintSave() {
@@ -3274,6 +3338,141 @@
     return { x: bx, y: by };
   }
 
+  /* --- lock-area / erase-area selection tools (rectangle or freeform shapes) --- */
+  function pointInRect(pt, r) {
+    return pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
+  }
+  function pointInPolygon(pt, points) {
+    let inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+      const xi = points[i].x, yi = points[i].y, xj = points[j].x, yj = points[j].y;
+      const denom = (yj - yi) || 1e-12;
+      const intersect = ((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / denom + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+  function hitTestLockedRegion(pt) {
+    const regions = state.map.lockedRegions || [];
+    for (let i = regions.length - 1; i >= 0; i--) {
+      const r = regions[i];
+      if (r.type === 'rect' && pointInRect(pt, r)) return r;
+      if (r.type === 'poly' && r.points.length >= 3 && pointInPolygon(pt, r.points)) return r;
+    }
+    return null;
+  }
+  function buildShapePath(ctx, shape) {
+    if (shape.type === 'rect') {
+      ctx.rect(shape.x, shape.y, shape.w, shape.h);
+    } else if (shape.type === 'poly') {
+      ctx.moveTo(shape.points[0].x, shape.points[0].y);
+      for (let i = 1; i < shape.points.length; i++) ctx.lineTo(shape.points[i].x, shape.points[i].y);
+      ctx.closePath();
+    }
+  }
+  function beginLockExclusionClip() {
+    const regions = state.map.lockedRegions || [];
+    if (!mapCtx || !regions.length) return false;
+    mapCtx.save();
+    mapCtx.beginPath();
+    mapCtx.rect(0, 0, boardW(), boardH());
+    regions.forEach(r => buildShapePath(mapCtx, r));
+    mapCtx.clip('evenodd'); // "holes" over locked areas: drawing inside them has no effect
+    return true;
+  }
+
+  function renderLockRegions() {
+    lockRegionsSvg.innerHTML = '';
+    (state.map.lockedRegions || []).forEach(r => {
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      let d;
+      if (r.type === 'rect') d = `M ${r.x} ${r.y} h ${r.w} v ${r.h} h ${-r.w} Z`;
+      else d = 'M ' + r.points.map(p => `${p.x} ${p.y}`).join(' L ') + ' Z';
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'cv-lockregion-path');
+      lockRegionsSvg.appendChild(path);
+    });
+  }
+
+  function updateSelectBoxPreview(worldStart, worldCur) {
+    const x = Math.min(worldStart.x, worldCur.x), y = Math.min(worldStart.y, worldCur.y);
+    const w = Math.abs(worldCur.x - worldStart.x), h = Math.abs(worldCur.y - worldStart.y);
+    selectBoxEl.style.left = x + 'px';
+    selectBoxEl.style.top = y + 'px';
+    selectBoxEl.style.width = w + 'px';
+    selectBoxEl.style.height = h + 'px';
+    selectBoxEl.classList.add('show');
+  }
+  function hideSelectBoxPreview() { selectBoxEl.classList.remove('show'); }
+
+  function renderFreeformPreview() {
+    selectSvg.innerHTML = '';
+    if (!freeformPoints.length) return;
+    const pts = freeformPreviewPt ? [...freeformPoints, freeformPreviewPt] : freeformPoints;
+    const d = 'M ' + pts.map(p => `${p.x} ${p.y}`).join(' L ');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('class', 'cv-selection-path');
+    selectSvg.appendChild(path);
+    freeformPoints.forEach(p => {
+      const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 4);
+      c.setAttribute('fill', '#5F9EA0');
+      selectSvg.appendChild(c);
+    });
+  }
+
+  function updateSelectionControls() {
+    const active = freeformPoints.length > 0;
+    selectionControls.classList.toggle('show', active);
+    selectionFinishBtn.disabled = freeformPoints.length < 3;
+    selectionHintEl.textContent = freeformPoints.length < 3
+      ? `Click points to trace a shape (${freeformPoints.length} so far, need 3+)`
+      : `${freeformPoints.length} points \u2014 click Finish, or keep adding`;
+  }
+
+  function cancelInProgressSelection() {
+    freeformPoints = [];
+    freeformPreviewPt = null;
+    rectSelectStart = null;
+    renderFreeformPreview();
+    updateSelectionControls();
+    hideSelectBoxPreview();
+  }
+
+  function finalizeSelectionShape(shape) {
+    if (mapTool === 'lockarea') {
+      state.map.lockedRegions.push(shape);
+      persist();
+      renderLockRegions();
+      flashSaved();
+    } else if (mapTool === 'selecterase') {
+      pushUndo();
+      mapCtx.save();
+      mapCtx.beginPath();
+      buildShapePath(mapCtx, shape);
+      mapCtx.clip();
+      mapCtx.clearRect(0, 0, boardW(), boardH());
+      mapCtx.restore();
+      schedulePaintSave();
+      flashSaved();
+    }
+  }
+
+  document.querySelectorAll('.cv-shape-mode').forEach(btn => {
+    btn.onclick = () => {
+      selectShapeMode = btn.dataset.shape;
+      document.querySelectorAll('.cv-shape-mode').forEach(b => b.classList.toggle('active', b === btn));
+      cancelInProgressSelection();
+    };
+  });
+  selectionFinishBtn.onclick = () => {
+    if (freeformPoints.length < 3) return;
+    finalizeSelectionShape({ id: uid('lockregion'), type: 'poly', points: freeformPoints.slice() });
+    cancelInProgressSelection();
+  };
+  selectionCancelBtn.onclick = () => cancelInProgressSelection();
+
   mapWrap.addEventListener('pointerdown', (e) => {
     if (e.target.closest('#cv-label-toolbar') || e.target.closest('#cv-map-zoom') || e.target.closest('#cv-map-imgsel')) return;
     if (e.target.classList && e.target.classList.contains('cv-map-label')) return; // labels handle their own
@@ -3284,15 +3483,19 @@
       if (!mapCtx) return;
       pushUndo();
       painting = true;
+      paintClipActive = beginLockExclusionClip();
       lastPt = mapScreenToWorld(e.clientX, e.clientY);
       // draw a dot for single clicks
       strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
       e.preventDefault();
     } else if (mapTool === 'fill') {
       if (!mapCtx) return;
-      pushUndo();
       const p = mapScreenToWorld(e.clientX, e.clientY);
+      if (hitTestLockedRegion(p)) return; // that spot is protected
+      pushUndo();
+      const clipped = beginLockExclusionClip();
       floodFillAt(p.x, p.y, mapColor, 40);
+      if (clipped) mapCtx.restore();
       schedulePaintSave();
       e.preventDefault();
     } else if (mapTool === 'pick') {
@@ -3303,6 +3506,19 @@
         $('cv-map-custom-color').value = hex;
       }
       setMapTool('paint');
+      e.preventDefault();
+    } else if (mapTool === 'lockarea' || mapTool === 'selecterase') {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      if (selectShapeMode === 'freeform') {
+        freeformPoints.push(p);
+        freeformPreviewPt = p;
+        renderFreeformPreview();
+        updateSelectionControls();
+      } else {
+        // rect mode: a plain click (no drag) on an existing locked shape removes it
+        const existing = mapTool === 'lockarea' ? hitTestLockedRegion(p) : null;
+        rectSelectStart = { world: p, screenX: e.clientX, screenY: e.clientY, moved: false, existing };
+      }
       e.preventDefault();
     } else if (mapTool === 'label') {
       const p = mapScreenToWorld(e.clientX, e.clientY);
@@ -3354,13 +3570,19 @@
       mapVw.y = mapPan.oy + (e.clientY - mapPan.sy);
       clampMapView();
       applyMapTransform();
+    } else if (rectSelectStart) {
+      const p = mapScreenToWorld(e.clientX, e.clientY);
+      const dx = e.clientX - rectSelectStart.screenX, dy = e.clientY - rectSelectStart.screenY;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) rectSelectStart.moved = true;
+      updateSelectBoxPreview(rectSelectStart.world, p);
     }
   });
 
-  window.addEventListener('pointerup', () => {
+  window.addEventListener('pointerup', (e) => {
     if (painting) {
       painting = false;
       lastPt = null;
+      if (paintClipActive) { mapCtx.restore(); paintClipActive = false; }
       schedulePaintSave();
     }
     if (mapImgDrag) {
@@ -3375,6 +3597,26 @@
     if (mapPan) {
       mapPan = null;
       mapWrap.classList.remove('panning');
+    }
+    if (rectSelectStart) {
+      const start = rectSelectStart;
+      rectSelectStart = null;
+      hideSelectBoxPreview();
+      if (!start.moved) {
+        // a plain click: remove the locked shape under it, if any (Lock tool only)
+        if (start.existing) {
+          state.map.lockedRegions = state.map.lockedRegions.filter(r => r.id !== start.existing.id);
+          persist();
+          renderLockRegions();
+        }
+      } else {
+        const p = mapScreenToWorld(e.clientX, e.clientY);
+        const x = Math.min(start.world.x, p.x), y = Math.min(start.world.y, p.y);
+        const w = Math.abs(p.x - start.world.x), h = Math.abs(p.y - start.world.y);
+        if (w >= 10 && h >= 10) {
+          finalizeSelectionShape({ id: uid('lockregion'), type: 'rect', x, y, w, h });
+        }
+      }
     }
     mapRectCache = null;
   });
@@ -3413,6 +3655,11 @@
         if (document.activeElement === el) return; // editing: let text selection work
         e.preventDefault();
         e.stopPropagation();
+        if (lb.locked) {
+          el.focus();
+          showLabelToolbar(lb, el);
+          return;
+        }
         dragInfo = { sx: e.clientX, sy: e.clientY, ox: lb.x, oy: lb.y, moved: false };
         const move = (ev) => {
           const dx = (ev.clientX - dragInfo.sx) / mapVw.scale;
@@ -3465,6 +3712,7 @@
     activeLabelId = lb.id;
     labelToolbar.classList.add('show');
     $('cv-lbl-color-wheel').value = lb.color || '#E8E2D4';
+    $('cv-lbl-lock').classList.toggle('active', !!lb.locked);
     positionLabelToolbar(lb, el);
   }
   function hideLabelToolbar() {
@@ -3498,6 +3746,13 @@
     if (!lb || !el) return;
     lb.color = e.target.value;
     el.style.color = lb.color;
+    persist();
+  };
+  $('cv-lbl-lock').onclick = () => {
+    const lb = activeLabel();
+    if (!lb) return;
+    lb.locked = !lb.locked;
+    $('cv-lbl-lock').classList.toggle('active', !!lb.locked);
     persist();
   };
 
@@ -3684,6 +3939,10 @@
       if (shiftX || shiftY) {
         (state.map.images || []).forEach(mi => { mi.x += shiftX; mi.y += shiftY; });
         (state.map.labels || []).forEach(lb => { lb.x += shiftX; lb.y += shiftY; });
+        (state.map.lockedRegions || []).forEach(r => {
+          if (r.type === 'rect') { r.x += shiftX; r.y += shiftY; }
+          else if (r.type === 'poly') { r.points.forEach(p => { p.x += shiftX; p.y += shiftY; }); }
+        });
       }
       undoStack = [];
       redoStack = [];
@@ -3694,6 +3953,7 @@
       (state.map.images || []).forEach(clampImageToBoard);
       renderMapImages();
       renderMapLabels();
+      renderLockRegions();
       clampMapView();
       applyMapTransform();
       persist();
@@ -4062,13 +4322,6 @@
         dot.style.height = dotSize + 'px';
         dot.style.background = ev.color;
         dot.style.boxShadow = `0 0 0 2px ${ev.color}`;
-        if (ev.locked) {
-          const lockBadge = document.createElement('div');
-          lockBadge.className = 'cv-tl-lock-badge';
-          lockBadge.textContent = '\u{1F512}';
-          lockBadge.title = 'Locked';
-          dot.appendChild(lockBadge);
-        }
         const label = document.createElement('div');
         label.className = 'cv-tl-label';
         label.style.fontSize = ev.size + 'px';
@@ -4554,6 +4807,7 @@
     else if (writingView.classList.contains('open')) closeWriting();
     else if (timelineDetail.classList.contains('show')) closeTimelineDetail();
     else if (timelineView.classList.contains('open')) closeTimeline();
+    else if (freeformPoints.length || rectSelectStart) cancelInProgressSelection();
     else if (mapView.classList.contains('open')) { hideLabelToolbar(); closeMap(); }
   });
 
