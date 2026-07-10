@@ -3416,16 +3416,18 @@
   }
 
   function pickColorAt(worldX, worldY) {
-    if (!mapCtx) return null;
     const x = Math.floor(worldX), y = Math.floor(worldY);
-    if (x < 0 || y < 0 || x >= mapPaint.width || y >= mapPaint.height) return null;
-    try {
-      const d = mapCtx.getImageData(x, y, 1, 1).data;
-      if (d[3] < 10) return null; // nothing painted at that spot
-      return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
-    } catch (e) {
-      return null;
+    if (x < 0 || y < 0 || x >= boardW() || y >= boardH()) return null;
+    // check the active (top) layer first, then fall back to the locked base underneath --
+    // matches what you actually see on screen, since the two layers are stacked visually
+    for (const ctx of [mapCtx, mapCtxBase]) {
+      if (!ctx) continue;
+      try {
+        const d = ctx.getImageData(x, y, 1, 1).data;
+        if (d[3] >= 10) return '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+      } catch (e) {}
     }
+    return null; // nothing painted at that spot on either layer
   }
 
   function hitTestMapImage(worldPt) {
