@@ -1218,7 +1218,7 @@
         <button class="cv-shape-mode" data-erasemode="area" title="Draw a shape and erase everything inside it">&#9633; Area</button>
       </span>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
-      <button class="cv-map-tool" data-tool="lockarea" title="Protect an area from paint/erase, or unlock one you made earlier">&#128274; Lock</button>
+      <button class="cv-map-tool" data-tool="lockarea" title="Protect an area from being erased -- you can still paint over it. Or unlock one you made earlier.">&#128274; Lock</button>
       <span class="cv-shape-mode-group" id="cv-lock-mode-group">
         <button class="cv-shape-mode active" data-lockmode="lock" title="Draw a shape to protect that area">&#128274; Lock</button>
         <button class="cv-shape-mode" data-lockmode="unlock" title="Click a protected area to remove the lock">&#128275; Unlock</button>
@@ -3278,7 +3278,6 @@
   function finalizeLine(start, end) {
     if (!mapCtx) return;
     pushUndo();
-    const clipped = beginLockExclusionClip();
     mapCtx.lineCap = 'round';
     mapCtx.lineWidth = mapBrush;
     mapCtx.strokeStyle = mapColor;
@@ -3287,21 +3286,18 @@
     mapCtx.moveTo(start.x, start.y);
     mapCtx.lineTo(end.x, end.y);
     mapCtx.stroke();
-    if (clipped) mapCtx.restore();
     schedulePaintSave();
   }
 
   function finalizeCircle(center, radius) {
     if (!mapCtx || radius < 1) return;
     pushUndo();
-    const clipped = beginLockExclusionClip();
     mapCtx.lineWidth = mapBrush;
     mapCtx.strokeStyle = mapColor;
     mapCtx.globalCompositeOperation = 'source-over';
     mapCtx.beginPath();
     mapCtx.arc(center.x, center.y, radius, 0, Math.PI * 2);
     mapCtx.stroke();
-    if (clipped) mapCtx.restore();
     schedulePaintSave();
   }
 
@@ -3504,11 +3500,19 @@
       persist();
       flashSaved(); // stays invisible -- outlines only ever show while actively in Unlock mode
     } else if (mapTool === 'erase' && eraseSubMode === 'area') {
+      if (!mapCtx) return;
       pushUndo();
       mapCtx.save();
       mapCtx.beginPath();
       buildShapePath(mapCtx, shape);
-      mapCtx.clip();
+      mapCtx.clip(); // constrain erasing to the selection itself
+      const regions = state.map.lockedRegions || [];
+      if (regions.length) {
+        mapCtx.beginPath();
+        mapCtx.rect(0, 0, boardW(), boardH());
+        regions.forEach(r => buildShapePath(mapCtx, r));
+        mapCtx.clip('evenodd'); // ...and additionally protect any locked areas inside it
+      }
       mapCtx.clearRect(0, 0, boardW(), boardH());
       mapCtx.restore();
       schedulePaintSave();
@@ -3529,13 +3533,20 @@
 
     mapRectCache = mapWrap.getBoundingClientRect(); // measured once; reused for the whole gesture below
 
-    if ((mapTool === 'paint' && paintDrawMode === 'freehand') || (mapTool === 'erase' && eraseSubMode === 'freehand')) {
+    if (mapTool === 'paint' && paintDrawMode === 'freehand') {
       if (!mapCtx) return;
       pushUndo();
       painting = true;
-      paintClipActive = beginLockExclusionClip();
       lastPt = mapScreenToWorld(e.clientX, e.clientY);
       // draw a dot for single clicks
+      strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
+      e.preventDefault();
+    } else if (mapTool === 'erase' && eraseSubMode === 'freehand') {
+      if (!mapCtx) return;
+      pushUndo();
+      painting = true;
+      paintClipActive = beginLockExclusionClip(); // erase is the only tool locks actually block
+      lastPt = mapScreenToWorld(e.clientX, e.clientY);
       strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
       e.preventDefault();
     } else if (mapTool === 'paint' && paintDrawMode === 'line') {
@@ -3547,11 +3558,8 @@
     } else if (mapTool === 'fill') {
       if (!mapCtx) return;
       const p = mapScreenToWorld(e.clientX, e.clientY);
-      if (hitTestLockedRegion(p)) return; // that spot is protected
       pushUndo();
-      const clipped = beginLockExclusionClip();
-      floodFillAt(p.x, p.y, mapColor, 40);
-      if (clipped) mapCtx.restore();
+      floodFillAt(p.x, p.y, mapColor, 40); // fill can go over locked areas too -- locks only block Erase
       schedulePaintSave();
       e.preventDefault();
     } else if (mapTool === 'pick') {
