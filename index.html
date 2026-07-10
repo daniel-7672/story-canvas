@@ -578,7 +578,7 @@
     background-size: auto, 26px 26px, auto;
     box-shadow: 0 0 0 1px var(--border-soft), 0 20px 60px rgba(0,0,0,0.5);
   }
-  #cv-map-paint {
+  #cv-map-paint-base, #cv-map-paint {
     position: absolute; top: 0; left: 0;
   }
   #cv-map-labels { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -711,8 +711,7 @@
 
   #cv-map-wrap.tool-paint.mode-freehand, #cv-map-wrap.tool-erase.mode-freehand { cursor: none; }
   #cv-map-wrap.tool-paint.mode-line, #cv-map-wrap.tool-paint.mode-circle,
-  #cv-map-wrap.tool-erase.mode-area,
-  #cv-map-wrap.tool-lockarea.mode-lock, #cv-map-wrap.tool-lockarea.mode-unlock { cursor: crosshair; }
+  #cv-map-wrap.tool-erase.mode-area { cursor: crosshair; }
 
   #cv-map-selectbox {
     position: absolute; display: none;
@@ -721,12 +720,11 @@
     pointer-events: none; z-index: 16;
   }
   #cv-map-selectbox.show { display: block; }
-  #cv-map-selectsvg, #cv-map-lockregions-svg {
+  #cv-map-selectsvg {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     pointer-events: none; overflow: visible; z-index: 14;
   }
   .cv-selection-path { fill: rgba(95,158,160,0.1); stroke: #5F9EA0; stroke-width: 2; stroke-dasharray: 6 4; }
-  .cv-lockregion-path { fill: rgba(201,97,61,0.05); stroke: var(--wax-dim); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: 0.6; }
 
   #cv-selection-controls {
     display: none;
@@ -1218,11 +1216,8 @@
         <button class="cv-shape-mode" data-erasemode="area" title="Draw a shape and erase everything inside it">&#9633; Area</button>
       </span>
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
-      <button class="cv-map-tool" data-tool="lockarea" title="Protect an area from being erased -- you can still paint over it. Or unlock one you made earlier.">&#128274; Lock</button>
-      <span class="cv-shape-mode-group" id="cv-lock-mode-group">
-        <button class="cv-shape-mode active" data-lockmode="lock" title="Draw a shape to protect that area">&#128274; Lock</button>
-        <button class="cv-shape-mode" data-lockmode="unlock" title="Click a protected area to remove the lock">&#128275; Unlock</button>
-      </span>
+      <button class="cv-map-tool" id="cv-map-lock-btn" title="Lock in everything drawn so far -- it becomes permanent and can't be erased. A fresh layer opens on top for new detail, which you CAN still erase until you lock it too.">&#128274; Lock in</button>
+      <button class="cv-map-tool" id="cv-map-unlock-btn" title="Undo your last Lock -- brings that layer back so you can erase it again">&#128275; Unlock last</button>
       <span class="cv-shape-mode-group" id="cv-shape-mode-group" title="How the next shape you draw is made">
         <button class="cv-shape-mode active" data-shape="rect">&#9633; Rect</button>
         <button class="cv-shape-mode" data-shape="freeform">&#9998; Freeform</button>
@@ -1251,6 +1246,7 @@
     <div id="cv-map-wrap">
       <div id="cv-map-inner">
         <div id="cv-map-images"></div>
+        <canvas id="cv-map-paint-base" width="2400" height="1600"></canvas>
         <canvas id="cv-map-paint" width="2400" height="1600"></canvas>
         <div id="cv-map-labels"></div>
         <div id="cv-map-grid"></div>
@@ -1260,7 +1256,6 @@
         </div>
         <div id="cv-map-selectbox"></div>
         <svg id="cv-map-selectsvg"></svg>
-        <svg id="cv-map-lockregions-svg"></svg>
       </div>
       <div id="cv-brush-cursor"></div>
       <div id="cv-selection-controls">
@@ -1547,7 +1542,6 @@
     if (!Array.isArray(state.map.images)) state.map.images = [];
     if (typeof state.map.w !== 'number') state.map.w = 3600;
     if (typeof state.map.h !== 'number') state.map.h = 1300;
-    if (!Array.isArray(state.map.lockedRegions)) state.map.lockedRegions = [];
     if (typeof state.map.gridOn !== 'boolean') state.map.gridOn = false;
     if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
     if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
@@ -1812,6 +1806,7 @@
     (state.writings || []).forEach(w => (w.images || []).forEach(k => keys.add(k)));
     (state.timeline.events || []).forEach(ev => (ev.images || []).forEach(k => keys.add(k)));
     keys.add('map-paint');
+    keys.add('map-paint-base');
     keys.add('map-base'); // legacy, harmless if absent
     for (const key of keys) {
       try {
@@ -1857,7 +1852,6 @@
           if (!state.map || typeof state.map !== 'object') state.map = { labels: [], hasBase: false };
           if (!Array.isArray(state.map.labels)) state.map.labels = [];
           if (!Array.isArray(state.map.images)) state.map.images = [];
-          if (!Array.isArray(state.map.lockedRegions)) state.map.lockedRegions = [];
           if (typeof state.map.gridOn !== 'boolean') state.map.gridOn = false;
           if (!state.timeline || typeof state.timeline !== 'object') state.timeline = { events: [] };
           if (!Array.isArray(state.timeline.events)) state.timeline.events = [];
@@ -2920,6 +2914,7 @@
   const mapWrap = $('cv-map-wrap');
   const mapInner = $('cv-map-inner');
   const mapImagesEl = $('cv-map-images');
+  const mapPaintBase = $('cv-map-paint-base');
   const mapPaint = $('cv-map-paint');
   const mapLabelsEl = $('cv-map-labels');
   const labelToolbar = $('cv-label-toolbar');
@@ -2927,7 +2922,6 @@
   const imgSel = $('cv-map-imgsel');
   const selectBoxEl = $('cv-map-selectbox');
   const selectSvg = $('cv-map-selectsvg');
-  const lockRegionsSvg = $('cv-map-lockregions-svg');
   const selectionControls = $('cv-selection-controls');
   const selectionFinishBtn = $('cv-selection-finish');
   const selectionCancelBtn = $('cv-selection-cancel');
@@ -2937,14 +2931,14 @@
   const MAP_DEFAULT_W = 3600, MAP_DEFAULT_H = 1300;
   function boardW() { return (state.map && state.map.w) || MAP_DEFAULT_W; }
   function boardH() { return (state.map && state.map.h) || MAP_DEFAULT_H; }
-  function resizePaintCanvas(newW, newH, offsetX, offsetY) {
+  function resizeCanvasLayer(canvasEl, ctx, newW, newH, offsetX, offsetY, onDone) {
     let snap = null;
-    try { if (mapPaint.width > 0 && mapPaint.height > 0) snap = mapPaint.toDataURL(); } catch (e) {}
-    mapPaint.width = newW;
-    mapPaint.height = newH;
-    if (snap && mapCtx) {
+    try { if (canvasEl.width > 0 && canvasEl.height > 0) snap = canvasEl.toDataURL(); } catch (e) {}
+    canvasEl.width = newW;
+    canvasEl.height = newH;
+    if (snap && ctx) {
       const img = new Image();
-      img.onload = () => { mapCtx.drawImage(img, offsetX, offsetY); schedulePaintSave(); };
+      img.onload = () => { ctx.drawImage(img, offsetX, offsetY); if (onDone) onDone(); };
       img.src = snap;
     }
   }
@@ -2952,18 +2946,22 @@
     mapInner.style.width = boardW() + 'px';
     mapInner.style.height = boardH() + 'px';
     if (mapPaint.width !== boardW() || mapPaint.height !== boardH()) {
-      resizePaintCanvas(boardW(), boardH(), 0, 0);
+      resizeCanvasLayer(mapPaint, mapCtx, boardW(), boardH(), 0, 0, schedulePaintSave);
+    }
+    if (mapPaintBase.width !== boardW() || mapPaintBase.height !== boardH()) {
+      resizeCanvasLayer(mapPaintBase, mapCtxBase, boardW(), boardH(), 0, 0, saveBaseLayer);
     }
   }
   let mapCtx = null;
+  let mapCtxBase = null;
   let mapTool = 'move';
   let mapColor = '#7A8471';
   let mapBrush = 10;
   let paintDrawMode = 'freehand';
   let eraseSubMode = 'freehand';
-  let lockSubMode = 'lock';
   let lineStart = null;
   let circleStart = null;
+  let lockHistory = []; // each entry: { baseBefore, mergedContent } snapshots for undoing a Lock
   let mapVw = { x: 0, y: 0, scale: 0.4 };
   let mapPan = null;
   let painting = false;
@@ -2981,7 +2979,6 @@
   let rectSelectStart = null;
   let freeformPoints = [];
   let freeformPreviewPt = null;
-  let paintClipActive = false;
 
   $('cv-map-custom-color').oninput = (e) => { mapColor = e.target.value; };
   $('cv-map-size').oninput = (e) => {
@@ -3036,16 +3033,13 @@
   function currentSubMode() {
     if (mapTool === 'paint') return paintDrawMode;
     if (mapTool === 'erase') return eraseSubMode;
-    if (mapTool === 'lockarea') return lockSubMode;
     return null;
   }
 
   function updateToolModeVisibility() {
     $('cv-paint-mode-group').classList.toggle('show', mapTool === 'paint');
     $('cv-erase-mode-group').classList.toggle('show', mapTool === 'erase');
-    $('cv-lock-mode-group').classList.toggle('show', mapTool === 'lockarea');
-    const showShapeMode = (mapTool === 'lockarea' && lockSubMode === 'lock') || (mapTool === 'erase' && eraseSubMode === 'area');
-    $('cv-shape-mode-group').classList.toggle('show', showShapeMode);
+    $('cv-shape-mode-group').classList.toggle('show', mapTool === 'erase' && eraseSubMode === 'area');
   }
 
   function setMapTool(tool) {
@@ -3062,7 +3056,6 @@
     hideImgSel();
     cancelInProgressSelection();
     updateToolModeVisibility();
-    renderLockRegions(); // self-guards: only actually shows outlines while in Unlock mode
     if (!sub || sub === 'freehand') updateBrushCursor();
     else brushCursor.style.display = 'none';
   }
@@ -3081,7 +3074,6 @@
   }
   wireSubModeGroup('cv-paint-mode-group', 'drawmode', (v) => { paintDrawMode = v; }, () => setMapTool('paint'));
   wireSubModeGroup('cv-erase-mode-group', 'erasemode', (v) => { eraseSubMode = v; }, () => setMapTool('erase'));
-  wireSubModeGroup('cv-lock-mode-group', 'lockmode', (v) => { lockSubMode = v; }, () => setMapTool('lockarea'));
   wireSubModeGroup('cv-shape-mode-group', 'shape', (v) => { selectShapeMode = v; }, () => cancelInProgressSelection());
 
   const mapGridEl = $('cv-map-grid');
@@ -3093,10 +3085,73 @@
     persist();
   };
 
+  /* --- lock-in-layers: Lock flattens the current work permanently (erase can never touch it again);
+     a fresh, fully erasable layer opens on top. Unlock reverses only the most recent Lock. --- */
+  $('cv-map-lock-btn').onclick = () => {
+    if (!mapCtx || !mapCtxBase) return;
+    showConfirm({
+      title: 'Lock in your current drawing?',
+      msg: "Everything on the map becomes permanent and can't be erased. A fresh layer opens on top so you can keep adding detail -- fully erasable until you lock that too.",
+      okLabel: 'Lock it in',
+      onConfirm: () => {
+        let baseBefore = null, mergedContent = null;
+        try { baseBefore = mapPaintBase.toDataURL(); } catch (e) {}
+        try { mergedContent = mapPaint.toDataURL(); } catch (e) {}
+        mapCtxBase.globalCompositeOperation = 'source-over';
+        mapCtxBase.drawImage(mapPaint, 0, 0); // merge the active layer down into the permanent base
+        mapCtx.clearRect(0, 0, boardW(), boardH()); // fresh, fully erasable layer for new detail
+        lockHistory.push({ baseBefore, mergedContent });
+        if (lockHistory.length > 10) lockHistory.shift();
+        undoStack = [];
+        redoStack = [];
+        saveBaseLayer();
+        schedulePaintSave();
+        flashSaved();
+      },
+    });
+  };
+
+  $('cv-map-unlock-btn').onclick = () => {
+    if (!mapCtx || !mapCtxBase) return;
+    if (!lockHistory.length) {
+      showConfirm({ title: 'Nothing to unlock', msg: "You haven't locked anything in this session yet.", okLabel: 'OK', hideCancel: true, onConfirm: () => {} });
+      return;
+    }
+    showConfirm({
+      title: 'Undo your last Lock?',
+      msg: "Brings that layer back so you can erase it again. Anything you've drawn on the current layer since locking will be lost -- export a backup first if you want to keep it.",
+      okLabel: 'Unlock',
+      onConfirm: () => {
+        const entry = lockHistory.pop();
+        const restore = (ctx, dataUrl) => new Promise(resolve => {
+          ctx.clearRect(0, 0, boardW(), boardH());
+          if (!dataUrl) { resolve(); return; }
+          const img = new Image();
+          img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
+          img.onerror = () => resolve();
+          img.src = dataUrl;
+        });
+        Promise.all([
+          restore(mapCtxBase, entry.baseBefore),
+          restore(mapCtx, entry.mergedContent),
+        ]).then(() => {
+          undoStack = [];
+          redoStack = [];
+          saveBaseLayer();
+          schedulePaintSave();
+          flashSaved();
+        });
+      },
+    });
+  };
+
   async function openMap() {
     mapView.classList.add('open');
     if (!mapCtx) {
       try { mapCtx = mapPaint.getContext('2d'); } catch (e) { mapCtx = null; }
+    }
+    if (!mapCtxBase) {
+      try { mapCtxBase = mapPaintBase.getContext('2d'); } catch (e) { mapCtxBase = null; }
     }
     applyBoardSize();
     if (!mapLoaded) {
@@ -3121,10 +3176,17 @@
           img.src = paintData;
         }
       } catch (e) {}
+      try {
+        const baseData = await idbGet('images', 'map-paint-base');
+        if (baseData && mapCtxBase) {
+          const img = new Image();
+          img.onload = () => mapCtxBase.drawImage(img, 0, 0);
+          img.src = baseData;
+        }
+      } catch (e) {}
     }
     renderMapImages();
     renderMapLabels();
-    renderLockRegions();
     mapGridEl.classList.toggle('show', !!state.map.gridOn);
     gridBtn.classList.toggle('active', !!state.map.gridOn);
     setTimeout(fitMapToScreen, 30);
@@ -3133,9 +3195,12 @@
   function resetMapForReload() {
     mapLoaded = false;
     undoStack = [];
+    redoStack = [];
+    lockHistory = [];
     hideImgSel();
     mapImagesEl.innerHTML = '';
     if (mapCtx) mapCtx.clearRect(0, 0, boardW(), boardH());
+    if (mapCtxBase) mapCtxBase.clearRect(0, 0, boardW(), boardH());
     if (mapView.classList.contains('open')) openMap();
   }
 
@@ -3249,6 +3314,14 @@
         idbSet('images', 'map-paint', data).then(flashSaved).catch(() => markStorageBroken());
       } catch (e) {}
     }, 800);
+  }
+
+  function saveBaseLayer() {
+    if (!mapCtxBase) return;
+    try {
+      const data = mapPaintBase.toDataURL('image/png');
+      idbSet('images', 'map-paint-base', data).then(flashSaved).catch(() => markStorageBroken());
+    } catch (e) {}
   }
 
   function hexToRgb(hex) {
@@ -3389,29 +3462,7 @@
     return { x: bx, y: by };
   }
 
-  /* --- lock-area / erase-area selection tools (rectangle or freeform shapes) --- */
-  function pointInRect(pt, r) {
-    return pt.x >= r.x && pt.x <= r.x + r.w && pt.y >= r.y && pt.y <= r.y + r.h;
-  }
-  function pointInPolygon(pt, points) {
-    let inside = false;
-    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
-      const xi = points[i].x, yi = points[i].y, xj = points[j].x, yj = points[j].y;
-      const denom = (yj - yi) || 1e-12;
-      const intersect = ((yi > pt.y) !== (yj > pt.y)) && (pt.x < (xj - xi) * (pt.y - yi) / denom + xi);
-      if (intersect) inside = !inside;
-    }
-    return inside;
-  }
-  function hitTestLockedRegion(pt) {
-    const regions = state.map.lockedRegions || [];
-    for (let i = regions.length - 1; i >= 0; i--) {
-      const r = regions[i];
-      if (r.type === 'rect' && pointInRect(pt, r)) return r;
-      if (r.type === 'poly' && r.points.length >= 3 && pointInPolygon(pt, r.points)) return r;
-    }
-    return null;
-  }
+  /* --- erase-area selection tool (rectangle or freeform shapes) --- */
   function buildShapePath(ctx, shape) {
     if (shape.type === 'rect') {
       ctx.rect(shape.x, shape.y, shape.w, shape.h);
@@ -3420,30 +3471,6 @@
       for (let i = 1; i < shape.points.length; i++) ctx.lineTo(shape.points[i].x, shape.points[i].y);
       ctx.closePath();
     }
-  }
-  function beginLockExclusionClip() {
-    const regions = state.map.lockedRegions || [];
-    if (!mapCtx || !regions.length) return false;
-    mapCtx.save();
-    mapCtx.beginPath();
-    mapCtx.rect(0, 0, boardW(), boardH());
-    regions.forEach(r => buildShapePath(mapCtx, r));
-    mapCtx.clip('evenodd'); // "holes" over locked areas: drawing inside them has no effect
-    return true;
-  }
-
-  function renderLockRegions() {
-    lockRegionsSvg.innerHTML = '';
-    if (!(mapTool === 'lockarea' && lockSubMode === 'unlock')) return; // invisible outside Unlock mode
-    (state.map.lockedRegions || []).forEach(r => {
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      let d;
-      if (r.type === 'rect') d = `M ${r.x} ${r.y} h ${r.w} v ${r.h} h ${-r.w} Z`;
-      else d = 'M ' + r.points.map(p => `${p.x} ${p.y}`).join(' L ') + ' Z';
-      path.setAttribute('d', d);
-      path.setAttribute('class', 'cv-lockregion-path');
-      lockRegionsSvg.appendChild(path);
-    });
   }
 
   function updateSelectBoxPreview(worldStart, worldCur) {
@@ -3495,24 +3522,13 @@
   }
 
   function finalizeSelectionShape(shape) {
-    if (mapTool === 'lockarea') {
-      state.map.lockedRegions.push(shape);
-      persist();
-      flashSaved(); // stays invisible -- outlines only ever show while actively in Unlock mode
-    } else if (mapTool === 'erase' && eraseSubMode === 'area') {
+    if (mapTool === 'erase' && eraseSubMode === 'area') {
       if (!mapCtx) return;
       pushUndo();
       mapCtx.save();
       mapCtx.beginPath();
       buildShapePath(mapCtx, shape);
       mapCtx.clip(); // constrain erasing to the selection itself
-      const regions = state.map.lockedRegions || [];
-      if (regions.length) {
-        mapCtx.beginPath();
-        mapCtx.rect(0, 0, boardW(), boardH());
-        regions.forEach(r => buildShapePath(mapCtx, r));
-        mapCtx.clip('evenodd'); // ...and additionally protect any locked areas inside it
-      }
       mapCtx.clearRect(0, 0, boardW(), boardH());
       mapCtx.restore();
       schedulePaintSave();
@@ -3522,7 +3538,7 @@
 
   selectionFinishBtn.onclick = () => {
     if (freeformPoints.length < 3) return;
-    finalizeSelectionShape({ id: uid('lockregion'), type: 'poly', points: freeformPoints.slice() });
+    finalizeSelectionShape({ id: uid('selshape'), type: 'poly', points: freeformPoints.slice() });
     cancelInProgressSelection();
   };
   selectionCancelBtn.onclick = () => cancelInProgressSelection();
@@ -3545,7 +3561,6 @@
       if (!mapCtx) return;
       pushUndo();
       painting = true;
-      paintClipActive = beginLockExclusionClip(); // erase is the only tool locks actually block
       lastPt = mapScreenToWorld(e.clientX, e.clientY);
       strokeTo({ x: lastPt.x + 0.01, y: lastPt.y + 0.01 });
       e.preventDefault();
@@ -3571,17 +3586,7 @@
       }
       setMapTool('paint');
       e.preventDefault();
-    } else if (mapTool === 'lockarea' && lockSubMode === 'unlock') {
-      const p = mapScreenToWorld(e.clientX, e.clientY);
-      const hit = hitTestLockedRegion(p);
-      if (hit) {
-        state.map.lockedRegions = state.map.lockedRegions.filter(r => r.id !== hit.id);
-        persist();
-        renderLockRegions(); // still in Unlock mode: re-render so remaining outlines stay visible
-        flashSaved();
-      }
-      e.preventDefault();
-    } else if ((mapTool === 'lockarea' && lockSubMode === 'lock') || (mapTool === 'erase' && eraseSubMode === 'area')) {
+    } else if (mapTool === 'erase' && eraseSubMode === 'area') {
       const p = mapScreenToWorld(e.clientX, e.clientY);
       if (selectShapeMode === 'freeform') {
         freeformPoints.push(p);
@@ -3671,7 +3676,6 @@
     if (painting) {
       painting = false;
       lastPt = null;
-      if (paintClipActive) { mapCtx.restore(); paintClipActive = false; }
       schedulePaintSave();
     }
     if (mapImgDrag) {
@@ -3696,7 +3700,7 @@
         const x = Math.min(start.world.x, p.x), y = Math.min(start.world.y, p.y);
         const w = Math.abs(p.x - start.world.x), h = Math.abs(p.y - start.world.y);
         if (w >= 10 && h >= 10) {
-          finalizeSelectionShape({ id: uid('lockregion'), type: 'rect', x, y, w, h });
+          finalizeSelectionShape({ id: uid('selshape'), type: 'rect', x, y, w, h });
         }
       }
     }
@@ -4034,21 +4038,17 @@
       if (shiftX || shiftY) {
         (state.map.images || []).forEach(mi => { mi.x += shiftX; mi.y += shiftY; });
         (state.map.labels || []).forEach(lb => { lb.x += shiftX; lb.y += shiftY; });
-        (state.map.lockedRegions || []).forEach(r => {
-          if (r.type === 'rect') { r.x += shiftX; r.y += shiftY; }
-          else if (r.type === 'poly') { r.points.forEach(p => { p.x += shiftX; p.y += shiftY; }); }
-        });
       }
       undoStack = [];
       redoStack = [];
-      resizePaintCanvas(boardW(), boardH(), shiftX, shiftY);
+      resizeCanvasLayer(mapPaint, mapCtx, boardW(), boardH(), shiftX, shiftY, schedulePaintSave);
+      resizeCanvasLayer(mapPaintBase, mapCtxBase, boardW(), boardH(), shiftX, shiftY, saveBaseLayer);
       mapInner.style.width = boardW() + 'px';
       mapInner.style.height = boardH() + 'px';
 
       (state.map.images || []).forEach(clampImageToBoard);
       renderMapImages();
       renderMapLabels();
-      renderLockRegions();
       clampMapView();
       applyMapTransform();
       persist();
@@ -4133,6 +4133,7 @@
       });
     }
 
+    if (mapCtxBase) ctx.drawImage(mapPaintBase, 0, 0);
     if (mapCtx) ctx.drawImage(mapPaint, 0, 0);
 
     (state.map.labels || []).forEach(lb => {
@@ -4905,6 +4906,41 @@
     else if (freeformPoints.length || rectSelectStart) cancelInProgressSelection();
     else if (mapView.classList.contains('open')) { hideLabelToolbar(); closeMap(); }
   });
+
+  /* --- WASD pans the map, whatever tool is active -- no need to switch to Move first --- */
+  const wasdHeld = new Set();
+  let wasdRafId = null;
+  const WASD_SPEED = 16; // screen pixels per frame, feels the same at any zoom level
+  function wasdLoop() {
+    if (!wasdHeld.size || !mapView.classList.contains('open')) { wasdRafId = null; return; }
+    let dx = 0, dy = 0;
+    if (wasdHeld.has('w')) dy += WASD_SPEED;
+    if (wasdHeld.has('s')) dy -= WASD_SPEED;
+    if (wasdHeld.has('a')) dx += WASD_SPEED;
+    if (wasdHeld.has('d')) dx -= WASD_SPEED;
+    if (dx || dy) {
+      mapVw.x += dx;
+      mapVw.y += dy;
+      clampMapView();
+      applyMapTransform();
+    }
+    wasdRafId = requestAnimationFrame(wasdLoop);
+  }
+  function isTypingTarget(el) {
+    return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  }
+  window.addEventListener('keydown', (e) => {
+    if (!mapView.classList.contains('open')) return;
+    if (isTypingTarget(document.activeElement)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'w' || k === 'a' || k === 's' || k === 'd') {
+      wasdHeld.add(k);
+      if (!wasdRafId) wasdRafId = requestAnimationFrame(wasdLoop);
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (e) => { wasdHeld.delete(e.key.toLowerCase()); });
+  window.addEventListener('blur', () => wasdHeld.clear());
 
   applyTransform();
   load();
