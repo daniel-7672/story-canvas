@@ -1218,6 +1218,8 @@
       <button class="cv-map-tool" data-tool="label" title="Click the map to add a place name">&#127991; Label</button>
       <button class="cv-map-tool" id="cv-map-lock-btn" title="Lock in everything drawn so far -- it becomes permanent and can't be erased. A fresh layer opens on top for new detail, which you CAN still erase until you lock it too.">&#128274; Lock in</button>
       <button class="cv-map-tool" id="cv-map-unlock-btn" title="Undo your last Lock -- brings that layer back so you can erase it again">&#128275; Unlock last</button>
+      <button class="cv-map-tool" id="cv-map-import-drawing-btn" title="Bring a picture in as real drawing pixels at full quality, instead of a resizable image -- good for restoring a backup or a scan">&#128444; Import as drawing</button>
+      <input type="file" id="cv-map-import-drawing-input" accept="image/*" style="display:none;">
       <span class="cv-shape-mode-group" id="cv-shape-mode-group" title="How the next shape you draw is made">
         <button class="cv-shape-mode active" data-shape="rect">&#9633; Rect</button>
         <button class="cv-shape-mode" data-shape="freeform">&#9998; Freeform</button>
@@ -2939,7 +2941,10 @@
     if (snap && ctx) {
       const img = new Image();
       img.onload = () => { ctx.drawImage(img, offsetX, offsetY); if (onDone) onDone(); };
+      img.onerror = () => { if (onDone) onDone(); };
       img.src = snap;
+    } else if (onDone) {
+      onDone();
     }
   }
   function applyBoardSize() {
@@ -3083,6 +3088,26 @@
     mapGridEl.classList.toggle('show', state.map.gridOn);
     gridBtn.classList.toggle('active', state.map.gridOn);
     persist();
+  };
+
+  $('cv-map-import-drawing-btn').onclick = () => $('cv-map-import-drawing-input').click();
+  $('cv-map-import-drawing-input').onchange = () => {
+    const file = $('cv-map-import-drawing-input').files[0];
+    $('cv-map-import-drawing-input').value = '';
+    if (!file || !mapCtx) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        pushUndo();
+        // draw at native resolution, no scaling -- this is what preserves full quality
+        mapCtx.drawImage(img, 0, 0);
+        schedulePaintSave();
+        flashSaved();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   /* --- lock-in-layers: Lock flattens the current work permanently (erase can never touch it again);
@@ -3277,33 +3302,57 @@
   mapWrap.addEventListener('pointerleave', () => { brushCursor.style.display = 'none'; });
 
   /* --- painting --- */
+  let undoRestoreInFlight = false;
+
   function pushUndo() {
     if (!mapCtx) return;
     try {
-      undoStack.push(mapCtx.getImageData(0, 0, mapPaint.width, mapPaint.height));
+      undoStack.push(mapPaint.toDataURL()); // compressed -- a raw pixel snapshot of a large board can be 50-100+ MB each
       if (undoStack.length > 15) undoStack.shift();
       redoStack = []; // a new action invalidates the redo history
     } catch (e) {}
   }
 
+  function restoreLayerSnapshot(dataUrl, onDone) {
+    undoRestoreInFlight = true;
+    $('cv-map-undo').disabled = true;
+    $('cv-map-redo').disabled = true;
+    const img = new Image();
+    const finish = () => {
+      undoRestoreInFlight = false;
+      $('cv-map-undo').disabled = false;
+      $('cv-map-redo').disabled = false;
+      if (onDone) onDone();
+    };
+    img.onload = () => {
+      mapCtx.clearRect(0, 0, boardW(), boardH());
+      mapCtx.drawImage(img, 0, 0);
+      finish();
+    };
+    img.onerror = finish;
+    img.src = dataUrl;
+  }
+
   $('cv-map-undo').onclick = () => {
-    if (!mapCtx || !undoStack.length) return;
+    if (!mapCtx || !undoStack.length || undoRestoreInFlight) return;
     let current = null;
-    try { current = mapCtx.getImageData(0, 0, mapPaint.width, mapPaint.height); } catch (e) {}
+    try { current = mapPaint.toDataURL(); } catch (e) {}
     const prev = undoStack.pop();
-    if (current) redoStack.push(current);
-    mapCtx.putImageData(prev, 0, 0); // synchronous -- no race even on rapid clicks
-    schedulePaintSave();
+    restoreLayerSnapshot(prev, () => {
+      if (current) redoStack.push(current);
+      schedulePaintSave();
+    });
   };
 
   $('cv-map-redo').onclick = () => {
-    if (!mapCtx || !redoStack.length) return;
+    if (!mapCtx || !redoStack.length || undoRestoreInFlight) return;
     let current = null;
-    try { current = mapCtx.getImageData(0, 0, mapPaint.width, mapPaint.height); } catch (e) {}
+    try { current = mapPaint.toDataURL(); } catch (e) {}
     const next = redoStack.pop();
-    if (current) undoStack.push(current);
-    mapCtx.putImageData(next, 0, 0); // synchronous -- no race even on rapid clicks
-    schedulePaintSave();
+    restoreLayerSnapshot(next, () => {
+      if (current) undoStack.push(current);
+      schedulePaintSave();
+    });
   };
 
   function schedulePaintSave() {
@@ -4035,27 +4084,35 @@
     const shiftY = dir === 'top' ? delta : 0;
 
     const doResize = () => {
-      if (isHorizontal) state.map.w = boardW() + delta;
-      else state.map.h = boardH() + delta;
+      const newW = isHorizontal ? boardW() + delta : boardW();
+      const newH = isHorizontal ? boardH() : boardH() + delta;
 
-      if (shiftX || shiftY) {
-        (state.map.images || []).forEach(mi => { mi.x += shiftX; mi.y += shiftY; });
-        (state.map.labels || []).forEach(lb => { lb.x += shiftX; lb.y += shiftY; });
-      }
       undoStack = [];
       redoStack = [];
-      resizeCanvasLayer(mapPaint, mapCtx, boardW(), boardH(), shiftX, shiftY, schedulePaintSave);
-      resizeCanvasLayer(mapPaintBase, mapCtxBase, boardW(), boardH(), shiftX, shiftY, saveBaseLayer);
-      mapInner.style.width = boardW() + 'px';
-      mapInner.style.height = boardH() + 'px';
 
-      (state.map.images || []).forEach(clampImageToBoard);
-      renderMapImages();
-      renderMapLabels();
-      clampMapView();
-      applyMapTransform();
-      persist();
-      flashSaved();
+      let pending = 2;
+      const finishOne = () => {
+        pending--;
+        if (pending > 0) return;
+        // both layers are confirmed resized and saved -- only now is it safe to commit the new size
+        state.map.w = newW;
+        state.map.h = newH;
+        if (shiftX || shiftY) {
+          (state.map.images || []).forEach(mi => { mi.x += shiftX; mi.y += shiftY; });
+          (state.map.labels || []).forEach(lb => { lb.x += shiftX; lb.y += shiftY; });
+        }
+        mapInner.style.width = newW + 'px';
+        mapInner.style.height = newH + 'px';
+        (state.map.images || []).forEach(clampImageToBoard);
+        renderMapImages();
+        renderMapLabels();
+        clampMapView();
+        applyMapTransform();
+        persist();
+        flashSaved();
+      };
+      resizeCanvasLayer(mapPaint, mapCtx, newW, newH, shiftX, shiftY, () => { schedulePaintSave(); finishOne(); });
+      resizeCanvasLayer(mapPaintBase, mapCtxBase, newW, newH, shiftX, shiftY, () => { saveBaseLayer(); finishOne(); });
     };
 
     if (!grow) {
