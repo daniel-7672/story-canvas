@@ -3099,13 +3099,36 @@
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        pushUndo();
-        // draw at native resolution, no scaling -- this is what preserves full quality
-        mapCtx.drawImage(img, 0, 0);
-        schedulePaintSave();
-        flashSaved();
+        try {
+          pushUndo();
+          // draw at native resolution, no scaling -- this is what preserves full quality
+          mapCtx.drawImage(img, 0, 0);
+          schedulePaintSave();
+          flashSaved();
+        } catch (e) {
+          console.error('import as drawing failed', e);
+          showConfirm({
+            title: "Couldn't bring that picture in",
+            msg: 'Something went wrong drawing it onto the map. Nothing on your map was changed.',
+            okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+          });
+        }
+      };
+      img.onerror = () => {
+        showConfirm({
+          title: "Couldn't read that picture",
+          msg: "That file didn't load as an image. Try a different file.",
+          okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+        });
       };
       img.src = reader.result;
+    };
+    reader.onerror = () => {
+      showConfirm({
+        title: "Couldn't read that file",
+        msg: 'Something went wrong opening it. Try again, or try a different file.',
+        okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -3325,11 +3348,31 @@
       if (onDone) onDone();
     };
     img.onload = () => {
-      mapCtx.clearRect(0, 0, boardW(), boardH());
-      mapCtx.drawImage(img, 0, 0);
+      try {
+        // 'copy' replaces the canvas atomically from the new image alone -- if this throws for
+        // any reason, the canvas still has its PREVIOUS content, never a cleared-but-not-redrawn
+        // state (which is what could silently wipe a drawing if a draw ever failed partway).
+        mapCtx.globalCompositeOperation = 'copy';
+        mapCtx.drawImage(img, 0, 0);
+        mapCtx.globalCompositeOperation = 'source-over';
+      } catch (e) {
+        console.error('undo/redo restore failed', e);
+        showConfirm({
+          title: "Couldn't restore that step",
+          msg: "Something went wrong bringing back that version, so nothing was changed. Your current drawing is untouched.",
+          okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+        });
+      }
       finish();
     };
-    img.onerror = finish;
+    img.onerror = () => {
+      showConfirm({
+        title: "Couldn't restore that step",
+        msg: "That saved version didn't load correctly, so nothing was changed. Your current drawing is untouched.",
+        okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+      });
+      finish();
+    };
     img.src = dataUrl;
   }
 
