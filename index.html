@@ -2940,7 +2940,10 @@
     canvasEl.height = newH;
     if (snap && ctx) {
       const img = new Image();
-      img.onload = () => { ctx.drawImage(img, offsetX, offsetY); if (onDone) onDone(); };
+      img.onload = () => {
+        try { ctx.drawImage(img, offsetX, offsetY); } catch (e) { console.error('resize redraw failed', e); }
+        if (onDone) onDone();
+      };
       img.onerror = () => { if (onDone) onDone(); };
       img.src = snap;
     } else if (onDone) {
@@ -3145,8 +3148,18 @@
         let baseBefore = null, mergedContent = null;
         try { baseBefore = mapPaintBase.toDataURL(); } catch (e) {}
         try { mergedContent = mapPaint.toDataURL(); } catch (e) {}
-        mapCtxBase.globalCompositeOperation = 'source-over';
-        mapCtxBase.drawImage(mapPaint, 0, 0); // merge the active layer down into the permanent base
+        try {
+          mapCtxBase.globalCompositeOperation = 'source-over';
+          mapCtxBase.drawImage(mapPaint, 0, 0); // merge the active layer down into the permanent base
+        } catch (e) {
+          console.error('lock-in merge failed', e);
+          showConfirm({
+            title: "Couldn't lock that in",
+            msg: 'Something went wrong, so nothing was changed. Your drawing is exactly as it was.',
+            okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+          });
+          return; // abort -- do NOT clear the active layer if the merge didn't actually happen
+        }
         mapCtx.clearRect(0, 0, boardW(), boardH()); // fresh, fully erasable layer for new detail
         lockHistory.push({ baseBefore, mergedContent });
         if (lockHistory.length > 10) lockHistory.shift();
@@ -3225,7 +3238,10 @@
         idbGet('images', key).then(data => {
           if (!data) { resolve(); return; }
           const img = new Image();
-          img.onload = () => { ctx.drawImage(img, 0, 0); resolve(); };
+          img.onload = () => {
+            try { ctx.drawImage(img, 0, 0); } catch (e) { console.error('could not draw loaded layer', e); }
+            resolve();
+          };
           img.onerror = () => resolve();
           img.src = data;
         }).catch(() => resolve());
@@ -3405,7 +3421,10 @@
       try {
         const data = mapPaint.toDataURL('image/png');
         idbSet('images', 'map-paint', data).then(flashSaved).catch(() => markStorageBroken());
-      } catch (e) {}
+      } catch (e) {
+        console.error('could not capture the map for saving', e);
+        markStorageBroken();
+      }
     }, 800);
   }
 
@@ -3414,7 +3433,10 @@
     try {
       const data = mapPaintBase.toDataURL('image/png');
       idbSet('images', 'map-paint-base', data).then(flashSaved).catch(() => markStorageBroken());
-    } catch (e) {}
+    } catch (e) {
+      console.error('could not capture the locked layer for saving', e);
+      markStorageBroken();
+    }
   }
 
   function hexToRgb(hex) {
@@ -4230,7 +4252,10 @@
       if (!src) continue;
       await new Promise(resolve => {
         const img = new Image();
-        img.onload = () => { ctx.drawImage(img, mi.x, mi.y, mi.w, mi.h); resolve(); };
+        img.onload = () => {
+          try { ctx.drawImage(img, mi.x, mi.y, mi.w, mi.h); } catch (e) { console.error('could not draw map image into export', e); }
+          resolve();
+        };
         img.onerror = () => resolve();
         img.src = src;
       });
@@ -4255,30 +4280,39 @@
   }
 
   $('cv-map-save-img').onclick = async () => {
-    const canvas = await composeMapCanvas();
-    const blob = await mapCanvasToBlob(canvas);
-    if (!blob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    const stamp = new Date().toISOString().slice(0, 10);
-    a.download = `world-map-${stamp}.png`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    flashSaved();
+    try {
+      const canvas = await composeMapCanvas();
+      const blob = await mapCanvasToBlob(canvas);
+      if (!blob) throw new Error('no blob produced');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.download = `world-map-${stamp}.png`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      flashSaved();
+    } catch (e) {
+      console.error('save image failed', e);
+      showConfirm({
+        title: "Couldn't save the image",
+        msg: 'Something went wrong putting the picture together. Nothing on your map was changed.',
+        okLabel: 'OK', hideCancel: true, onConfirm: () => {},
+      });
+    }
   };
 
   $('cv-map-copy-img').onclick = async () => {
-    const canvas = await composeMapCanvas();
-    const blob = await mapCanvasToBlob(canvas);
-    if (!blob) return;
     try {
+      const canvas = await composeMapCanvas();
+      const blob = await mapCanvasToBlob(canvas);
+      if (!blob) throw new Error('no blob produced');
       if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
       await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
       flashSaved();
     } catch (e) {
       showConfirm({
         title: "Couldn't copy to clipboard",
-        msg: "Your browser blocked copying images this way. Try 'Save image' instead and attach the file directly.",
+        msg: "Your browser blocked copying images this way (or something else went wrong). Try 'Save image' instead and attach the file directly.",
         okLabel: 'OK', hideCancel: true, onConfirm: () => {},
       });
     }
